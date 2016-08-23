@@ -3,6 +3,9 @@ import { attr, hasOne, hasMany } from 'ember-jsonapi-resources/models/resource';
 import Ember from 'ember';
 import RSVP from 'rsvp';
 
+import PostResource from 'dummy/models/post';
+export const Post = PostResource.extend({service: null}); // uses mock service
+/*
 export const Post = Resource.extend({
   type: 'posts',
   title: attr('string'),
@@ -12,6 +15,7 @@ export const Post = Resource.extend({
   author: hasOne('author'),
   comments: hasMany('comments')
 });
+*/
 
 export const Author = Resource.extend({
   type: 'authors',
