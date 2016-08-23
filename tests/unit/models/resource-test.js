@@ -173,22 +173,31 @@ test('#didUpdateResource does nothing if json argument has an id that does not m
 });
 
 test('#addRelationship', function(assert) {
-  let post = this.container.lookup('model:post').create({
-    id: '1', attributes: {title: 'Wyatt Earp', excerpt: 'Was a gambler.'}
-  });
-  post.addRelationship('author', '2');
-  let authorRelation = '{"author":{"links":{},"data":{"type":"authors","id":"2"}},"comments":{"links":{},"data":[]}}';
-  assert.equal(JSON.stringify(post.get('relationships')), authorRelation, 'added relationship for author');
+  // create resource with relation from json payload.
   let comment = this.container.lookup('model:comment').create({
     id: '4',  attributes: {body: 'Wyatt become a deputy too.' },
     relationships: { commenter: { data: { type: 'commenter', id: '3' } } }
   });
-  let commenterRelation = '{"commenter":{"data":{"type":"commenter","id":"3"},"links":{}},"post":{"links":{},"data":null}}';
-  assert.equal(JSON.stringify(comment.get('relationships')), commenterRelation, 'added commenter relationship to comment');
+  let commenterRelation = {links: {}, data: {type: 'commenter', id: '3'}};
+  assert.deepEqual(comment.get('relationships').commenter,
+                   commenterRelation,
+                  'created comment with commenter relationship from json payload');
 
+  // create resource and add relationships through .addRelationship()
+  // make sure both relationships exist after manipulation.
+  let post = this.container.lookup('model:post').create({
+    id: '1', attributes: {title: 'Wyatt Earp', excerpt: 'Was a gambler.'}
+  });
+  post.addRelationship('author', '2');
+  let authorRelation = {links: {}, data: {type: 'authors', id: '2'}};
   post.addRelationship('comments', '4');
-  let postRelations = '{"author":{"links":{},"data":{"type":"authors","id":"2"}},"comments":{"links":{},"data":[{"type":"comments","id":"4"}]}}';
-  assert.equal(JSON.stringify(post.get('relationships')), postRelations, 'added relationship for comment');
+  let commentsRelation = {links: {}, data: [{type: 'comments', id: '4'}]};
+  assert.deepEqual(post.get('relationships').author,
+                   authorRelation,
+                   'added author relationship to post');
+  assert.deepEqual(post.get('relationships').comments,
+                   commentsRelation,
+                   'added relationship for comment to post');
 });
 
 test('#removeRelationship', function(assert) {
