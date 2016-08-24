@@ -116,7 +116,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @method toString
   */
   toString() {
-    let type = this.get('type') || 'null';
+    let type = singularize(this.get('type')) || 'null';
     let id = this.get('id') || 'null';
     return `[JSONAPIResource|${type}:${id}]`;
   },
