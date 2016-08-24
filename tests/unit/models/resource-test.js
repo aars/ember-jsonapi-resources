@@ -184,7 +184,7 @@ test('#addRelationship', function(assert) {
                   'created comment with commenter relationship from json payload');
 
   // create resource and add relationships through .addRelationship()
-  // make sure both relationships exist after manipulation.
+  // make sure both relationships exist after all manipulations.
   let post = this.container.lookup('model:post').create({
     id: '1', attributes: {title: 'Wyatt Earp', excerpt: 'Was a gambler.'}
   });
@@ -192,6 +192,7 @@ test('#addRelationship', function(assert) {
   let authorRelation = {links: {}, data: {type: 'authors', id: '2'}};
   post.addRelationship('comments', '4');
   let commentsRelation = {links: {}, data: [{type: 'comments', id: '4'}]};
+
   assert.deepEqual(post.get('relationships').author,
                    authorRelation,
                    'added author relationship to post');
@@ -201,6 +202,7 @@ test('#addRelationship', function(assert) {
 });
 
 test('#removeRelationship', function(assert) {
+  // set up models and their relations through create with json payload.
   let post = this.container.lookup('model:post').create({
     id: '1', attributes: {title: 'Wyatt Earp', excerpt: 'Was a gambler.'},
     relationships: {
@@ -223,54 +225,96 @@ test('#removeRelationship', function(assert) {
   let comment = this.container.lookup('model:comment').create({
     id: '4', attributes: { body: 'Wyatt become a deputy too.' },
     relationships: {
-      commenter: { data: { type: 'commenter', id: '3' }, links: { related: ''} },
+      commenter: { data: { type: 'commenters', id: '3' }, links: { related: ''} },
       post: { data: { type: 'posts', id: '1' }, links: { related: ''} }
     }
   });
 
-  let authorRelations = '{"posts":{"data":[{"type":"posts","id":"1"}],"links":{"related":""}}}';
-  assert.equal(JSON.stringify(author.get('relationships')), authorRelations, 'author relations have a post');
+  // Test for correct representation of relationships.
+  let authorPostsRelation = {data: [{type: 'posts', id: '1'}], links: {related: ''}};
+  assert.deepEqual(author.get('relationships.posts'),
+                   authorPostsRelation,
+                   'author relations have a post (hasMany)');
 
-  let postRelations = '{"author":{"data":{"type":"authors","id":"2"},"links":{"related":""}},"comments":{"data":[{"type":"comments","id":"4"}],"links":{"related":""}}}';
-  assert.equal(JSON.stringify(post.get('relationships')), postRelations, 'author relations have a post');
+  let postAuthorRelation   = {data: {type: 'authors', id: '2'}, links: {related: ''}};
+  let postCommentsRelation = {data: [{type: 'comments', id: '4'}], links: {related: ''}};
+  assert.deepEqual(post.get('relationships.author'),
+                   postAuthorRelation,
+                   'post relations have an author (hasOne)');
+  assert.deepEqual(post.get('relationships.comments'),
+                   postCommentsRelation,
+                   'post relations have a comment (hasMany)');
 
-  let commentRelations = '{"commenter":{"data":{"type":"commenter","id":"3"},"links":{"related":""}},"post":{"data":{"type":"posts","id":"1"},"links":{"related":""}}}';
-  assert.equal(JSON.stringify(comment.get('relationships')), commentRelations, 'comment relations have a commenter');
+  let commentCommenterRelation = {data: {type: 'commenters', id: '3'}, links: {related: ''}};
+  let commentPostRelation      = {data: {type: 'posts', id: '1'}, links: {related: ''}};
+  assert.deepEqual(comment.get('relationships.commenter'),
+                   commentCommenterRelation,
+                   'comment relations have a commenter (hasOne)');
+  assert.deepEqual(comment.get('relationships.post'),
+                   commentPostRelation,
+                   'comment relations have a post (hasOne)');
 
-  let commenterRelations = '{"comments":{"data":[{"type":"comments","id":"4"}],"links":{"related":""}}}';
-  assert.equal(JSON.stringify(commenter.get('relationships')), commenterRelations, 'commenter relations have a comment');
+  let commenterCommentsRelation = {data: [{type: 'comments', id: '4'}], links: {related: ''}};
+  assert.deepEqual(commenter.get('relationships.comments'),
+                   commenterCommentsRelation,
+                   'commenter relations have a comment (hasMany)');
+
+  // Remove relationships and test for correct representation of relationships.
 
   post.removeRelationship('author', '2');
-  let postAuthorRelation = '{"data":null,"links":{"related":""}}';
-  assert.equal(JSON.stringify(post.get('relationships.author')), postAuthorRelation, 'removed author from post, author relation ok');
-  let postCommentsRelation = '{"data":[{"type":"comments","id":"4"}],"links":{"related":""}}';
-  assert.equal(JSON.stringify(post.get('relationships.comments')), postCommentsRelation, 'removed author from post, comments relation ok');
+  // author relationship must still exist, but empty (hasOne == null)
+  postAuthorRelation.data = null;
+  assert.deepEqual(post.get('relationships.author'),
+                   postAuthorRelation,
+                   'removed author from post, author relation now empty');
+  // relationship to comments must be unchanged.
+  assert.deepEqual(post.get('relationships.comments'),
+                   postCommentsRelation,
+                   'removed author from post, comments relation unchanged');
 
   post.removeRelationship('comments', '4');
-  postAuthorRelation = '{"data":null,"links":{"related":""}}';
-  assert.equal(JSON.stringify(post.get('relationships.author')), postAuthorRelation, 'removed comment from post, author relation ok');
-  postCommentsRelation = '{"data":[],"links":{"related":""}}';
-  assert.equal(JSON.stringify(post.get('relationships.comments')), postCommentsRelation, 'removed comment from post, comments relation ok');
+  // comments relationship must still exist, but empty (hasMany == empty array)
+  postCommentsRelation.data = [];
+  // author relationship must be unchanged.
+  assert.deepEqual(post.get('relationships.comments'),
+                   postCommentsRelation,
+                   'removed comment from post, comments relation now empty');
+  assert.deepEqual(post.get('relationships.author'),
+                   postAuthorRelation,
+                   'removed comment from post, author relation unchanged');
 
   author.removeRelationship('posts', '1');
-  authorRelations = '{"posts":{"data":[],"links":{"related":""}}}';
-  assert.equal(JSON.stringify(author.get('relationships')), authorRelations, 'removed a post from author');
+  // posts relation must still exist, but empty (hasMany == empty array)
+  authorPostsRelation.data = [];
+  assert.deepEqual(author.get('relationships.posts'),
+                   authorPostsRelation,
+                   'removed a post from author, posts relation now empty');
 
   comment.removeRelationship('commenter', '3');
-  let commentCommenterRelations = '{"data":null,"links":{"related":""}}';
-  assert.equal(JSON.stringify(comment.get('relationships.commenter')), commentCommenterRelations, 'removed a commenter from comment, commenter relation ok');
-  let commentPostRelations = '{"data":{"type":"posts","id":"1"},"links":{"related":""}}';
-  assert.equal(JSON.stringify(comment.get('relationships.post')), commentPostRelations, 'removed a commenter from comment, post relation ok');
+  // comment relation must still exist, but empty (hasOne == null)
+  commentCommenterRelation.data = null;
+  assert.deepEqual(comment.get('relationships.commenter'),
+                   commentCommenterRelation,
+                   'removed a commenter from comment, commenter relation now empty');
+  assert.deepEqual(comment.get('relationships.post'),
+                   commentPostRelation,
+                   'removed a commenter from comment, post relation unchanged');
 
   comment.removeRelationship('post', '1');
-  commentCommenterRelations = '{"data":null,"links":{"related":""}}';
-  assert.equal(JSON.stringify(comment.get('relationships.commenter')), commentCommenterRelations, 'removed a post from comment, commenter relation ok');
-  commentPostRelations = '{"data":null,"links":{"related":""}}';
-  assert.equal(JSON.stringify(comment.get('relationships.post')), commentPostRelations, 'removed a post from comment, post relation ok');
+  commentPostRelation.data = null;
+  assert.deepEqual(comment.get('relationships.post'),
+                   commentPostRelation,
+                   'removed a post from comment, post relation now empty');
+  assert.deepEqual(comment.get('relationships.commenter'),
+                   commentCommenterRelation,
+                   'removed a post from comment, commenter relation unchanged');
 
   commenter.removeRelationship('comments', '4');
-  commenterRelations = '{"comments":{"data":[],"links":{"related":""}}}';
-  assert.equal(JSON.stringify(commenter.get('relationships')), commenterRelations, 'removed a comment from commenter');
+  // comments relation must still exist, but empty (hasMany == empty array)
+  commenterCommentsRelation.data = [];
+  assert.deepEqual(commenter.get('relationships.comments'),
+                   commenterCommentsRelation,
+                   'removed a comment from commenter, comments relation now empty');
 });
 
 test('#addRelationships', function(assert) {
