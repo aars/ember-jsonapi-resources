@@ -37,7 +37,7 @@ test('#toString method', function(assert) {
   let resource = this.subject();
   let stringified = resource.toString();
   assert.equal(stringified, '[JSONAPIResource|resource:null]', 'resource.toString() is ' + stringified);
-  resource.setProperties({id: '1', type: 'post'});
+  resource.setProperties({id: '1', type: 'posts'});
   stringified = resource.toString();
   assert.equal(stringified, '[JSONAPIResource|post:1]', 'resource.toString() is ' + stringified);
 });

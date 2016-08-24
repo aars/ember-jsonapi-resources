@@ -110,7 +110,6 @@ test('#findRelated', function(assert) {
 test('#findRelated can be called with optional type for the resource', function (assert) {
   assert.expect(4);
   const done = assert.async();
-
   let supervisor = this.container.lookup('model:supervisor').create({
     type: 'supervisors',
     id: '1000000',
@@ -155,9 +154,9 @@ test('#findRelated can be called with optional type for the resource', function 
   });
   let url = resource.get( ['relationships', 'supervisor', 'links', 'related'].join('.') );
   resource.get('supervisor').then(function() {
-    assert.ok(stub.calledOnce, 'people service findRelated method called once');
+    assert.ok(stub.calledOnce, 'employees service findRelated method called once');
     assert.equal(stub.firstCall.args[0].resource, 'supervisor', 'findRelated called with supervisor resource');
-    assert.equal(stub.firstCall.args[0].type, 'people', 'findRelated called with people type');
+    assert.equal(stub.firstCall.args[0].type, 'employees', 'findRelated called with employees type');
     assert.equal(stub.firstCall.args[1], url, 'findRelated called with url, ' + url);
     done();
   });
