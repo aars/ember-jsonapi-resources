@@ -221,6 +221,10 @@ test('#findRelated', function(assert) {
   });
 });
 
+// TODO: This test is broken in an odd fashion. Ends up somehow calling `addRelationship`
+// and not finding a service for 'supervisors' to do a cacheLookup, and assert is somehow
+// seeing 5 assertions?!
+// Will present issue in seperate PR/comparison.
 test('#findRelated can be called with optional type for the resource', function (assert) {
   assert.expect(4);
   const done = assert.async();
@@ -231,7 +235,9 @@ test('#findRelated can be called with optional type for the resource', function 
   let supervisor = this.container.lookup('model:supervisor').create({
     type: 'supervisors',
     id: 1000000,
-    name: 'The Boss',
+    attributes: {
+      name: 'The Boss',
+    },
     relationships: {
       employees: {
         links: {
@@ -245,10 +251,12 @@ test('#findRelated can be called with optional type for the resource', function 
   let stub = sandbox.stub(service, 'findRelated', function () {
     return RSVP.Promise.resolve(supervisor);
   });
-  let resource = this.container.lookup('model:employee').create({
+  let employee = this.container.lookup('model:employee').create({
     type: 'employees',
     id: 1000001,
-    name: 'The Special',
+    attributes: {
+      name: 'The Special',
+    },
     relationships: {
       supervisor: {
         links: {
@@ -258,8 +266,8 @@ test('#findRelated can be called with optional type for the resource', function 
     }
   });
 
-  let url = resource.get('relationships.supervisor.links.related');
-  resource.get('supervisor').then(() => {
+  let url = employee.get('relationships.supervisor.links.related');
+  employee.get('supervisor').then(() => {
     assert.ok(stub.calledOnce, 'employees service findRelated method called once');
     assert.equal(stub.lastCall.args[0].resource, 'supervisor', 'findRelated called with supervisor resource');
     assert.equal(stub.lastCall.args[0].type, 'employees', 'findRelated called with employees type');

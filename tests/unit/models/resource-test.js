@@ -1,6 +1,6 @@
 import { moduleFor, test } from 'ember-qunit';
-import Ember from 'ember';
 import RSVP from 'rsvp';
+import Ember from 'ember';
 import Resource from 'ember-jsonapi-resources/models/resource';
 import { attr } from 'ember-jsonapi-resources/models/resource';
 import { setup, teardown, mockServices } from 'dummy/tests/helpers/resources';
@@ -31,6 +31,14 @@ test('it creates an instance, default flag for isNew is false', function(assert)
   let resource = this.subject();
   assert.ok(!!resource);
   assert.equal(resource.get('isNew'), false, 'default value for isNew flag set to `false`');
+});
+
+test('in creating instances, ids are cast to string', function (assert) {
+  let id = 1;
+  let post = this.container.lookup('model:post').create({
+    id: id, attributes: {title: 'Wyatt Earp', excerpt: 'Was a gambler.'}
+  });
+  assert.strictEqual(post.get('id'), id.toString(), 'new instance id cast to string');
 });
 
 test('#toString method', function(assert) {
@@ -201,6 +209,17 @@ test('#addRelationship', function(assert) {
                    'added relationship for comment to post');
 });
 
+test('#addRelationship cast id to string', function (assert) {
+  let post = this.container.lookup('model:post').create({
+    id: '1', attributes: {title: 'Wyatt Earp', excerpt: 'Was a gambler.'}
+  });
+  post.addRelationship('author', 1);
+  let authorRelation = {links: {}, data: {type: 'authors', id: '1'}};
+  assert.deepEqual(post.get('relationships').author,
+                   authorRelation,
+                   'add relationship with id of type number gets converted to string');
+});
+
 test('#removeRelationship', function(assert) {
   // set up models and their relations through create with json payload.
   let post = this.container.lookup('model:post').create({
@@ -317,6 +336,27 @@ test('#removeRelationship', function(assert) {
                    'removed a comment from commenter, comments relation now empty');
 });
 
+test('#removeRelationship casts id to string', function (assert) {
+  // set up model and their relations through create with json payload.
+  let post = this.container.lookup('model:post').create({
+    id: '1', attributes: {title: 'Wyatt Earp', excerpt: 'Was a gambler.'},
+    relationships: {
+      comments: {
+        data: [
+          {type: 'comments', id: '4'},
+          {type: 'comments', id: '5'},
+        ],
+        links: {related: ''}
+      }
+    }
+  });
+  let postCommentsRelation = {data: [{type: 'comments', id: '4'}], links: {related: ''}};
+  post.removeRelationship('comments', 5);
+  assert.deepEqual(post.get('relationships.comments'),
+                   postCommentsRelation,
+                   'comment relationship removed using number as id');
+});
+
 test('#addRelationships', function(assert) {
   let post = this.container.lookup('model:post').create({
     id: '1', attributes: {title: 'Wyatt Earp', excerpt: 'Was a gambler.'}
@@ -347,49 +387,6 @@ test('#removeRelationships', function(assert) {
   post.removeRelationships('author', '2');
   let author = post.get('relationships.author.data');
   assert.equal(author, null, 'removed author');
-});
-
-test('#updateRelationship, from resource-operations mixin', function(assert) {
-  let serviceOp = this.sandbox.spy(function() {
-    return RSVP.Promise.resolve(null);
-  });
-  let post = this.container.lookup('model:post').create({
-    id: '1', attributes: {title: 'Wyatt Earp', excerpt: 'Was a gambler.'},
-    relationships: {
-      author: { data: { type: 'authors', id: '2' }, links: { related: 'url-here'} },
-      comments: { data: [{ type: 'comments', id: '4' }], links: { related: 'url-here'} }
-    },
-    // mock service
-    service: { patchRelationship: serviceOp }
-  });
-  let author = post.get('relationships.author.data');
-  let comments = post.get('relationships.comments.data');
-  assert.equal(author.id, 2, 'post has author id 2');
-
-  post.updateRelationship('comments', ['4', '5']);
-  comments = post.get('relationships.comments.data');
-  assert.ok(serviceOp.calledOnce, 'service#patchRelationship called once');
-  assert.equal(comments.length, 2, 'post has 2 comments');
-
-  post.updateRelationship('comments', ['1', '2', '3', '4']);
-  comments = post.get('relationships.comments.data');
-  assert.equal(comments.length, 5, 'post has 5 comments');
-
-  post.updateRelationship('comments', ['1', '2']);
-  comments = post.get('relationships.comments.data');
-  assert.equal(comments.length, 2, 'post has 2 comments');
-
-  post.updateRelationship('comments', []);
-  comments = post.get('relationships.comments.data');
-  assert.equal(comments.length, 0, 'post has 0 comments');
-
-  post.updateRelationship('author', '1');
-  author = post.get('relationships.author.data');
-  assert.equal(author.id, 1, 'author id changed to 1');
-
-  post.updateRelationship('author', null);
-  author = post.get('relationships.author.data');
-  assert.equal(author, null, 'author removed');
 });
 
 test('#didResolveProxyRelation', function(assert) {
@@ -464,3 +461,48 @@ test('#isCacheExpired is false when local timestamp plus cacheDuration is less t
   });
   assert.equal(resource.get('isCacheExpired'), false, 'cache duration is in the future');
 });
+
+// TODO: Rewrite this test in tests/unit/mixins/resource-operations-test.js
+test('#updateRelationship, from resource-operations mixin', function(assert) {
+  let serviceOp = this.sandbox.spy(function() {
+    return RSVP.Promise.resolve(null);
+  });
+  let post = this.container.lookup('model:post').create({
+    id: '1', attributes: {title: 'Wyatt Earp', excerpt: 'Was a gambler.'},
+    relationships: {
+      author: { data: { type: 'authors', id: '2' }, links: { related: 'url-here'} },
+      comments: { data: [{ type: 'comments', id: '4' }], links: { related: 'url-here'} }
+    },
+    // mock service
+    service: { patchRelationship: serviceOp }
+  });
+  let author = post.get('relationships.author.data');
+  let comments = post.get('relationships.comments.data');
+  assert.equal(author.id, 2, 'post has author id 2');
+
+  post.updateRelationship('comments', ['4', '5']);
+  comments = post.get('relationships.comments.data');
+  assert.ok(serviceOp.calledOnce, 'service#patchRelationship called once');
+  assert.equal(comments.length, 2, 'post has 2 comments');
+
+  post.updateRelationship('comments', ['1', '2', '3', '4']);
+  comments = post.get('relationships.comments.data');
+  assert.equal(comments.length, 5, 'post has 5 comments');
+
+  post.updateRelationship('comments', ['1', '2']);
+  comments = post.get('relationships.comments.data');
+  assert.equal(comments.length, 2, 'post has 2 comments');
+
+  post.updateRelationship('comments', []);
+  comments = post.get('relationships.comments.data');
+  assert.equal(comments.length, 0, 'post has 0 comments');
+
+  post.updateRelationship('author', '1');
+  author = post.get('relationships.author.data');
+  assert.equal(author.id, 1, 'author id changed to 1');
+
+  post.updateRelationship('author', null);
+  author = post.get('relationships.author.data');
+  assert.equal(author, null, 'author removed');
+});
+

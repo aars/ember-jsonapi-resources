@@ -189,6 +189,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @param {String} id
   */
   addRelationship(related, id) {
+    if (id !== undefined) { id = id.toString(); } // allow numbers as id.
     let key = ['relationships', related, 'data'].join('.');
     let data = this.get(key);
     let type = pluralize(related);
@@ -229,6 +230,8 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @param {String} id
   */
   removeRelationship(related, id) {
+    if (id !== undefined) { id = id.toString(); } // allow numbers as id.
+
     let relation = this.get('relationships.' + related);
     if (Array.isArray(relation.data)) {
       for (let i = 0; i < relation.data.length; i++) {
@@ -415,8 +418,14 @@ Resource.reopenClass({
     for (let i = 0; i < attrs.length; i++) {
       prototype[attrs[i]] = {};
     }
+
     const instance = this._super(prototype);
     if (properties) {
+      if (properties.hasOwnProperty('id')) {
+        // JSONAPI ids MUST be strings.
+        properties.id = properties.id.toString();
+      }
+
       instance.setProperties(properties);
     }
     let type = singularize(instance.get('type'));
