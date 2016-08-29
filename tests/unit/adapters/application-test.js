@@ -735,7 +735,6 @@ test('#fetch handles 4xx (Client Error) response status', function(assert) {
   let promise = adapter.fetch('/posts', { method: 'POST', body: 'json string here' });
   assert.ok(typeof promise.then === 'function', 'returns a thenable');
   promise.catch((error) => {
-    console.log(error);
     assert.ok(error.name, 'Client Error', '4xx response throws a custom error');
     assert.equal(error.code, 404, 'error code 404 from response status');
     assert.ok(Array.isArray(error.errors), 'response includes errors from `text`');
