@@ -221,6 +221,10 @@ test('#findRelated', function(assert) {
   });
 });
 
+// TODO: This test is broken in an odd fashion. Ends up somehow calling `addRelationship`
+// and not finding a service for 'supervisors' to do a cacheLookup, and assert is somehow
+// seeing 5 assertions?!
+// Will present issue in seperate PR/comparison.
 test('#findRelated can be called with optional type for the resource', function (assert) {
   assert.expect(4);
   const done = assert.async();
@@ -251,7 +255,6 @@ test('#findRelated can be called with optional type for the resource', function 
   let stub = sandbox.stub(service, 'findRelated', function () {
     return RSVP.Promise.resolve(supervisor);
   });
-
   let resource = this.container.lookup('model:employee').create({
     type: 'employees',
     id: '1000001',
