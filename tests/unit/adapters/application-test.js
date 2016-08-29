@@ -44,6 +44,23 @@ test('#find calls #findOne when options arg is a string', function(assert) {
   });
 });
 
+test('#find casts options arg of type number to string', function (assert) {
+  assert.expect(3);
+  const done = assert.async();
+
+  const adapter = this.subject();
+  sandbox.stub(adapter, 'findOne', function () { return RSVP.Promise.resolve(null); });
+  let id = 0;
+  let promise = adapter.find(id);
+
+  assert.ok(typeof promise.then === 'function', 'returns a thenable');
+  promise.then(() => {
+    assert.ok(adapter.findOne.calledOnce, 'findOne called');
+    assert.ok(adapter.findOne.calledWith(id.toString()), 'findOne called with number id cast to string');
+    done();
+  });
+});
+
 test('#find calls #findOne when options arg is an object having an id property', function(assert) {
   assert.expect(3);
   const done = assert.async();
@@ -57,31 +74,30 @@ test('#find calls #findOne when options arg is an object having an id property',
   promise.then(() => {
     assert.ok(adapter.findOne.calledOnce, 'findOne called');
     assert.ok(
-      adapter.findOne.calledWith(options.id, options.query),
+      adapter.findOne.calledWith('1', options.query),
       'findOne called with `"1"` and query `{"sort": "-date"}`'
     );
     done();
   });
 });
 
-// Yeah... findQuery is used when options arg is not a string or an object.
-// undefined is not a string or an object, but so is a number.
-// TODO: id.toString() in to public methods? Or make this test more specific?
-test('#find calls #findQuery when options arg is undefined', function(assert) {
-  assert.expect(2);
+test('#find casts options.id to string before calling #findOne', function (assert) {
+  assert.expect(3);
   const done = assert.async();
 
   const adapter = this.subject();
-  sandbox.stub(adapter, 'findQuery', function () { return RSVP.Promise.resolve(null); });
-  let promise = adapter.find(undefined);
+  sandbox.stub(adapter, 'findOne', function () { return RSVP.Promise.resolve(null); });
+  let options = {id: 0, query: {sort: '-date'}};
+  let promise = adapter.find(options);
 
   assert.ok(typeof promise.then === 'function', 'returns a thenable');
   promise.then(() => {
-    assert.ok(adapter.findQuery.calledOnce, 'findQuery called');
+    assert.ok(adapter.findOne.calledOnce, 'findOne called');
+    assert.ok(adapter.findOne.calledWith(options.id.toString()), 'findOne called with number id cast to string');
     done();
   });
-});
 
+});
 test('#find calls #findQuery when options arg is an object without an id property', function(assert) {
   assert.expect(3);
   const done = assert.async();
@@ -98,6 +114,22 @@ test('#find calls #findQuery when options arg is an object without an id propert
       adapter.findQuery.calledWith(options),
       'findQuery called with query `{"sort": "-date"}`'
     );
+    done();
+  });
+});
+
+test('#find calls #findQuery when options arg is undefined', function(assert) {
+  assert.expect(3);
+  const done = assert.async();
+
+  const adapter = this.subject();
+  sandbox.stub(adapter, 'findQuery', function () { return RSVP.Promise.resolve(null); });
+  let promise = adapter.find(undefined);
+
+  assert.ok(typeof promise.then === 'function', 'returns a thenable');
+  promise.then(() => {
+    assert.ok(adapter.findQuery.calledOnce, 'findQuery called');
+    assert.ok(adapter.findQuery.calledWith(undefined), 'findQuery called with undefined');
     done();
   });
 });
@@ -513,15 +545,18 @@ test('#deleteResource can be called with a resource having a self link, and call
 
 test('when called with resource argument, #deleteResource calls #cacheRemove', function(assert) {
   assert.expect(1);
+  const done = assert.async();
 
   const adapter = this.subject({type: 'posts', url: '/posts'});
   sandbox.stub(adapter, 'fetch', function () { return RSVP.Promise.resolve(null); });
   let resource = this.container.lookup('model:post').create(postMock.data);
   sandbox.stub(adapter, 'cacheRemove', function () {});
-  Ember.run(() => { // Why is this called inside a Ember RunLoop? Does that imply async?
+  Ember.run(() => {
     adapter.deleteResource(resource);
   });
+
   assert.ok(adapter.cacheRemove.calledOnce, 'adapter#cacheRemove called');
+  done();
 });
 
 test('#fetch calls #fetchURL to customize if needed', function(assert) {
