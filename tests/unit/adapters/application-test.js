@@ -722,24 +722,24 @@ test('#fetch handles 4xx (Client Error) response status', function(assert) {
   const done = assert.async();
 
   const adapter = this.subject({type: 'posts', url: '/posts'});
+  const mockError = {errors: [{status: 404, title: 'I am an error'}]};
   sandbox.stub(adapter, 'fetchUrl', function () {});
   sandbox.stub(window, 'fetch', function () {
     return RSVP.Promise.resolve({
       "status": 404,
       "text": function() {
-        return RSVP.Promise.resolve('{ "errors": [ { "status": 404 } ] }');
+        return RSVP.Promise.resolve(JSON.stringify(mockError));
       }
     });
   });
   let promise = adapter.fetch('/posts', { method: 'POST', body: 'json string here' });
   assert.ok(typeof promise.then === 'function', 'returns a thenable');
   promise.catch((error) => {
+    console.log(error);
     assert.ok(error.name, 'Client Error', '4xx response throws a custom error');
-    // This one doesn't really test anything, does it? It checks if the mocked response
-    // above uses the correct format (errors array).
-    assert.ok(Array.isArray(error.errors), '4xx error includes errors');
-    assert.equal(error.errors[0].status, 404, '404 error status is in errors list');
-    assert.equal(error.code, 404, 'error code 404');
+    assert.equal(error.code, 404, 'error code 404 from response status');
+    assert.ok(Array.isArray(error.errors), 'response includes errors from `text`');
+    assert.deepEqual(error.errors, mockError.errors, 'response errors object intact');
     done();
   });
 });
