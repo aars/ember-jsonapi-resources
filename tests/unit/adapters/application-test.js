@@ -221,10 +221,6 @@ test('#findRelated', function(assert) {
   });
 });
 
-// TODO: This test is broken in an odd fashion. Ends up somehow calling `addRelationship`
-// and not finding a service for 'supervisors' to do a cacheLookup, and assert is somehow
-// seeing 5 assertions?!
-// Will present issue in seperate PR/comparison.
 test('#findRelated can be called with optional type for the resource', function (assert) {
   assert.expect(4);
   const done = assert.async();
@@ -264,18 +260,17 @@ test('#findRelated can be called with optional type for the resource', function 
     relationships: {
       supervisor: {
         links: {
-          related: 'http://api.pixelhandler.com/api/v1/employees/1000001/supervisor'
+          related: 'http://locahost:3000/api/v1/employees/1000001/supervisor'
         }
       }
     }
   });
-
   let url = resource.get('relationships.supervisor.links.related');
   resource.get('supervisor').then(() => {
     assert.ok(stub.calledOnce, 'employees service findRelated method called once');
-    assert.equal(stub.lastCall.args[0].resource, 'supervisor', 'findRelated called with supervisor resource');
-    assert.equal(stub.lastCall.args[0].type, 'employees', 'findRelated called with employees type');
-    assert.equal(stub.lastCall.args[1], url, 'findRelated called with url, ' + url);
+    assert.equal(stub.firstCall.args[0].resource, 'supervisor', 'findRelated called with supervisor resource');
+    assert.equal(stub.firstCall.args[0].type, 'employees', 'findRelated called with employees type');
+    assert.equal(stub.firstCall.args[1], url, 'findRelated called with url, ' + url);
     done();
   });
 });
