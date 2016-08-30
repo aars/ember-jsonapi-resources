@@ -221,7 +221,7 @@ test('#findRelated', function(assert) {
   });
 });
 
-test('#findRelated can be called with optional type for the resource', function (assert) {
+test('#findRelated is called with optional type for the resource', function (assert) {
   assert.expect(4);
   const done = assert.async();
   let supervisor = this.container.lookup('model:supervisor').create({
@@ -233,25 +233,25 @@ test('#findRelated can be called with optional type for the resource', function 
     relationships: {
       employees: {
         links: {
-          related: 'http://locahost:3000/api/v1/supervisors/1000000/employees'
+          related: 'http://api.pixelhandler.com/api/v1/supervisors/1000000/employees'
         }
       }
     }
   });
 
-  let PersonAdapter = Adapter.extend({type: 'people', url: '/people'});
-  this.registry.register('service:supervisors', PersonAdapter.extend({
+  let EmployeeAdapter = Adapter.extend({type: 'employees', url: '/employees'});
+  this.registry.register('service:supervisors', EmployeeAdapter.extend({
     cacheLookup: function() {
       return supervisor;
     }
   }));
-  PersonAdapter.reopenClass({ isServiceFactory: true });
-  this.registry.register('service:people', PersonAdapter.extend());
-  let service = this.container.lookup('service:people');
+  EmployeeAdapter.reopenClass({ isServiceFactory: true });
+  this.registry.register('service:employees', EmployeeAdapter.extend());
+  let service = this.container.lookup('service:employees');
   let stub = sandbox.stub(service, 'findRelated', function () {
     return RSVP.Promise.resolve(supervisor);
   });
-  let resource = this.container.lookup('model:employee').create({
+  let employee = this.container.lookup('model:employee').create({
     type: 'employees',
     id: '1000001',
     attributes: {
@@ -260,13 +260,13 @@ test('#findRelated can be called with optional type for the resource', function 
     relationships: {
       supervisor: {
         links: {
-          related: 'http://locahost:3000/api/v1/employees/1000001/supervisor'
+          related: 'http://api.pixelhandler.com/api/v1/employees/1000001/supervisor'
         }
       }
     }
   });
-  let url = resource.get('relationships.supervisor.links.related');
-  resource.get('supervisor').then(() => {
+  let url = employee.get('relationships.supervisor.links.related');
+  employee.get('supervisor').then(() => {
     assert.ok(stub.calledOnce, 'employees service findRelated method called once');
     assert.equal(stub.firstCall.args[0].resource, 'supervisor', 'findRelated called with supervisor resource');
     assert.equal(stub.firstCall.args[0].type, 'employees', 'findRelated called with employees type');
