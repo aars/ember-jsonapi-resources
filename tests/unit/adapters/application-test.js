@@ -502,6 +502,43 @@ test('#patchRelationship (to-one)', function(assert) {
   });
 });
 
+// Even though create- and deleteRelationship both use _payloadForRelationship,
+// which does the casting of id to String, we test them seperately to ensure this
+// is always tested, even when internals change.
+test('createRelationship casts id to string', function (assert) {
+  assert.expect(2);
+  const done = assert.async();
+
+  mockServices.call(this);
+  const adapter = this.subject({type: 'posts', url: '/posts'});
+  sandbox.stub(adapter, 'fetch', function () { return RSVP.Promise.resolve(null); });
+  let resource = this.container.lookup('model:post').create(postMock.data);
+  let createPromise = adapter.createRelationship(resource, 'comments', 1);
+  let deletePromise = adapter.deleteRelationship(resource, 'comments', 1);
+
+  let jsonBody = JSON.stringify({data: [{type: 'comments', id: '1'}]});
+  createPromise.then(() => {
+    assert.ok(
+      adapter.fetch.calledWith(
+        postMock.data.relationships.comments.links.self,
+        {method: 'POST', body: jsonBody}
+      ),
+      '#createRelationship casts id to String'
+    );
+    return deletePromise;
+  }).then(() => {
+    assert.ok(
+      adapter.fetch.calledWith(
+        postMock.data.relationships.comments.links.self,
+        {method: 'DELETE', body: jsonBody}
+      ),
+      '#deleteRelationship casts id to String'
+    );
+    done();
+  });
+});
+
+
 test('#deleteResource can be called with a string as the id for the resource', function(assert) {
   assert.expect(2);
   const done = assert.async();

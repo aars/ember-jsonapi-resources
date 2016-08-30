@@ -189,7 +189,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @param {String} id
   */
   addRelationship(related, id) {
-    if (id !== undefined) { id = id.toString(); } // allow numbers as id.
+    if (id !== undefined) { id = id.toString(); } // ensure String id.
     let key = ['relationships', related, 'data'].join('.');
     let data = this.get(key);
     let type = pluralize(related);
@@ -230,7 +230,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @param {String} id
   */
   removeRelationship(related, id) {
-    if (id !== undefined) { id = id.toString(); } // allow numbers as id.
+    if (id !== undefined) { id = id.toString(); } // ensure String ids.
 
     let relation = this.get('relationships.' + related);
     if (Array.isArray(relation.data)) {

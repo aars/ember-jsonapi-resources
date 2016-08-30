@@ -337,7 +337,7 @@ test('#removeRelationship', function(assert) {
 });
 
 test('#removeRelationship casts id to string', function (assert) {
-  // set up model and their relations through create with json payload.
+  // set up model and its relations through create with json payload.
   let post = this.container.lookup('model:post').create({
     id: '1', attributes: {title: 'Wyatt Earp', excerpt: 'Was a gambler.'},
     relationships: {

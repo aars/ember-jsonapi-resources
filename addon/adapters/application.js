@@ -321,7 +321,7 @@ export default Ember.Object.extend(FetchMixin, Evented, {
   */
   _payloadForRelationship(resource, relationship, id) {
     let data = resource.get(['relationships', relationship, 'data'].join('.'));
-    let resourceObject = { type: pluralize(relationship), id: id };
+    let resourceObject = { type: pluralize(relationship), id: id.toString() };
     return { data: (Array.isArray(data)) ? [resourceObject] : resourceObject };
   },
 
