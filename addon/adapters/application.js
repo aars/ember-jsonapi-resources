@@ -47,7 +47,7 @@ export default Ember.Object.extend(FetchMixin, Evented, {
   */
   find(options) {
     // Collect id and query from options (if given).
-    // ids are cast to string to allow number input.
+    // Ensure id is String conform JSONAPI specs.
     // findOne when id is given, otherwise findQuery.
     let id, query;
 
