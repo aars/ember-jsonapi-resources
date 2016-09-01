@@ -28,6 +28,35 @@ moduleFor('adapter:application', 'Unit | Adapter | application', {
   }
 });
 
+test('adapter has sane default url', function (assert) {
+  assert.expect(1);
+  this.registry.register('config:environment', {
+    APP: {
+      API_HOST: 'http://api.pixelhandler.com',
+      API_PATH: 'api/v1'
+    }
+  });
+  const adapter = this.subject({type: 'posts'});
+  assert.equal(adapter.get('url'), 'http://api.pixelhandler.com/api/v1/posts');
+});
+
+test('adapter default url handles enclosing slashes in config', function (assert) {
+  assert.expect(1);
+  this.registry.register('config:environment', {
+    APP: {
+      API_HOST: 'http://api.pixelhandler.com/',
+      API_PATH: '/api/v1/'
+    }
+  });
+  const adapter = this.subject({type: 'posts'});
+  assert.equal(adapter.get('url'), 'http://api.pixelhandler.com/api/v1/posts');
+});
+
+test('adapter allows custom url', function (assert) {
+  const adapter = this.subject({type: 'posts', url: 'http://example.com/posts'});
+  assert.equal(adapter.get('url'), 'http://example.com/posts');
+});
+
 test('#find calls #findOne when options arg is a string', function(assert) {
   assert.expect(3);
   const done = assert.async();
