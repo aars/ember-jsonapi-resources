@@ -12,6 +12,18 @@ import Ember from 'ember';
 */
 export default Ember.Mixin.create({
   /**
+   Flag for deleted instances, not persisted.
+
+    @property isDeleted
+    @type Boolean
+   */
+  isDeleted: Ember.computed({
+    get() {
+      return this.get('isDestroying') || this.get('isDestroyed');
+    }
+  }).readOnly(),
+
+  /**
     The service object for the entity (adapter with cache and serializer)
 
     @property service
@@ -27,8 +39,14 @@ export default Ember.Mixin.create({
   },
 
   delete() {
-    return this.get('isNew') ?
-      true :
-      this.get('service').deleteResource(this);
+    if (this.get('isDeleted')) {
+      return Ember.Logger.error('Resource already deleted (isDeleted)');
+    }
+    // Unpersisted records only need to toggle isDeleted.
+    if (this.get('isNew')) {
+      return this.destroy();
+    } else {
+      return this.get('service').deleteResource(this);
+    }
   }
 });
