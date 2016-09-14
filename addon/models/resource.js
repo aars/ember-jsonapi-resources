@@ -10,6 +10,7 @@ import hasOne from 'ember-jsonapi-resources/utils/has-one';
 import hasMany from 'ember-jsonapi-resources/utils/has-many';
 import { isType } from 'ember-jsonapi-resources/utils/is';
 import ResourceOperationsMixin from '../mixins/resource-operations';
+import ResourceDefaultsMixin from '../mixins/resource-defaults';
 
 const { getOwner, computed, Logger } = Ember;
 
@@ -454,7 +455,7 @@ Resource.reopenClass({
   }
 });
 
-export default Resource;
+export default Resource.reopenClass(ResourceDefaultsMixin);
 
 export { attr, hasOne, hasMany };
 
