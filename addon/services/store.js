@@ -32,8 +32,20 @@ export default Ember.Service.extend({
     return (service.cache && service.cache.data) ? service.cache.data : Ember.A([]);
   },
 
-  create(type, attributes) {
-    return this._modelFactory(type).create({attributes: attributes});
+  // I wish we could inspect the Resource before initialization so we can
+  // pluck the relationships from the `attributes` arg, allowing for a simpler
+  // create method. Since we can't (I think), accept relationships as third
+  // arg.
+  create(type, attributes, relationships) {
+    let resource = this._modelFactory(type).create({attributes: attributes});
+
+    for (let relation in relationships || {}) {
+      let ids = relationships[relation];
+      let addMethod = Ember.isArray(ids) ? 'addRelationships' : 'addRelationship';
+      resource[addMethod](relation, ids);
+    }
+
+    return resource;
   },
 
   _modelFactory(type) {
