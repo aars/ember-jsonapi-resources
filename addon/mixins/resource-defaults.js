@@ -7,8 +7,9 @@ export default Ember.Mixin.create({
 
   create(properties) {
     let defaults = (this._hasDefaults()) ? this.getDefaults() : {};
-    properties   = Ember.merge(properties || {}, defaults);
-
+    Object.keys(defaults).forEach(attr => {
+      properties[attr] = Ember.merge(properties[attr] || {}, defaults[attr]);
+    });
     return this._super(properties);
   }
 });
