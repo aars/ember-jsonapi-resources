@@ -52,8 +52,13 @@ export default function hasOne(relation) {
   let kind = 'hasOne';
   let util = RelatedProxyUtil.create({relationship: relation, type: type, kind: kind});
   let path = linksPath(relation);
-  return Ember.computed(path, function () {
-    return util.createProxy(this, kind);
+  return Ember.computed(path, {
+    get() {
+      return util.createProxy(this, kind);
+    },
+    set(k, v) {
+      return this.addRelationship(k, v);
+    }
   }).meta({relation: relation, type: type, kind: kind});
 }
 
