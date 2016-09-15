@@ -43,9 +43,12 @@ import { isDasherized } from 'ember-jsonapi-resources/utils/is';
 */
 export default function hasOne(relation) {
   let type = relation;
+  let inverse;
+
   if (typeof type === 'object') {
     assertResourceAndTypeProps(relation);
-    type = relation.type;
+    type     = relation.type;
+    inverse  = relation.inverse;
     relation = relation.resource;
   }
   assertDasherizedHasOneRelation(type);
@@ -59,7 +62,7 @@ export default function hasOne(relation) {
     set(k, v) {
       return this.addRelationship(k, v);
     }
-  }).meta({relation: relation, type: type, kind: kind});
+  }).meta({relation: relation, type: type, kind: kind, inverse: inverse});
 }
 
 function assertResourceAndTypeProps(relation) {
