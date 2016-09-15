@@ -11,7 +11,7 @@ import hasMany from 'ember-jsonapi-resources/utils/has-many';
 import { isType } from 'ember-jsonapi-resources/utils/is';
 import ResourceOperationsMixin from '../mixins/resource-operations';
 import ResourceDefaultsMixin from '../mixins/resource-defaults';
-
+import ResourceInverseRelationshipsMixin from '../mixins/resource-inverse-relationships';
 const { getOwner, computed, Logger } = Ember;
 
 /**
@@ -255,6 +255,12 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     }
   },
 
+  hasChangedAttributes: Ember.computed({
+    get() {
+      return !!Object.keys(this._attributes).length;
+    }
+  }).readOnly().volatile(),
+
   /**
     @method changedAttributes
     @return {Object} the changed attributes
@@ -455,7 +461,9 @@ Resource.reopenClass({
   }
 });
 
-export default Resource.reopenClass(ResourceDefaultsMixin);
+export default Resource
+                .reopenClass(ResourceDefaultsMixin)
+                .extend(ResourceInverseRelationshipsMixin);
 
 export { attr, hasOne, hasMany };
 
