@@ -21,7 +21,7 @@ export default Ember.Mixin.create({
     get() {
       return this.get('isDestroying') || this.get('isDestroyed');
     }
-  }).readOnly(),
+  }).readOnly().volatile(),
 
   /**
     The service object for the entity (adapter with cache and serializer)
