@@ -32,17 +32,21 @@ export default Ember.Mixin.create({
     // Add relationship to our self.
     if (Array.isArray(data)) {
       data.push(identifier);
+
       if (resource) {
-        this.get(related).then(resources => {
-          if (!resources.contains(resource)) {
-            resources.pushObject(resource);
-          }
-        });
+        let resources = this.get(related);
+        if (!resources.contains(resource)) {
+          resources.pushObject(resource);
+          resource.willDestroy = resources.removeObject.bind(resources, resource);
+        }
       }
     } else {
       data = identifier;
+
       if (resource) {
-        this.set(`${meta.relation}.content`, resource);
+        let contentKey = [meta.relation, 'content'].join('.');
+        this.set(contentKey, resource);
+        resource.willDestroy = this.set.bind(this, contentKey, null);
       }
     }
 
