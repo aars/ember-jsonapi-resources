@@ -8,6 +8,41 @@ import Ember from 'ember';
 import RSVP from 'rsvp';
 import { pluralize } from 'ember-inflector';
 
+
+/**
+ * Customized ObjectProxy and ArrayProxy that provide:
+ * - create method with default content property
+ * - addResource(s) method that automatically removes resources when
+ *   they are destroyed.
+ */
+const hasOneProxy = Ember.ObjectProxy.reopenClass({
+  create(properties) {
+    properties = properties || {};
+    properties.content = properties.content || Ember.Object.create();
+    return this._super(properties);
+  }
+}).extend({
+  addResource(resource) {
+    this.set('content', resource);
+    resource.willDestroy = this.set.bind(this, 'content', null);
+  }
+});
+const hasManyProxy = Ember.ArrayProxy.reopenClass({
+  create(properties) {
+    properties = properties || {};
+    properties.content = properties.content || Ember.A([]);
+    return this._super(properties);
+  }
+}).extend({
+  addResource(resource) {
+    this.pushObject(resource);
+    resource.willDestroy = this.removeObject.bind(this, resource);
+  },
+  addResources(resources) {
+    resources.forEach(this.addResource.bind(this));
+  }
+});
+
 /**
   Utility for creating promise proxy objects for related resources
 
@@ -48,6 +83,7 @@ const RelatedProxyUtil = Ember.Object.extend({
   */
   type: null,
 
+
   /**
     Proxy for the requested relation, resolves w/ content from fulfilled promise
 
@@ -57,16 +93,10 @@ const RelatedProxyUtil = Ember.Object.extend({
     @return {PromiseProxy|ObjectProxy|ArrayProxy} proxy instance, new resource uses mock relations
   */
   createProxy(resource, kind) {
-    let proxyFactory, newContent;
-    if (kind === 'hasMany') {
-      proxyFactory = Ember.ArrayProxy;
-      newContent = Ember.A([]);
-    } else if (kind === 'hasOne') {
-      proxyFactory = Ember.ObjectProxy;
-      newContent = Ember.Object.create();
-    }
+    const proxyFactory = (kind === 'hasOne') ? hasOneProxy : hasManyProxy;
+
     if (resource.get('isNew')) {
-      return proxyFactory.create({ content: newContent });
+      return proxyFactory.create();
     } else {
       let proxy = this.proxySetup(resource, kind, proxyFactory);
       return this.proxyResolution(resource, proxy);
@@ -86,14 +116,17 @@ const RelatedProxyUtil = Ember.Object.extend({
     let url = this.proxyUrl(resource, relation);
     let owner = (typeof Ember.getOwner === 'function') ? Ember.getOwner(resource) : resource.container;
     let service = owner.lookup('service:' + pluralize(type));
-    let promise = this.promiseFromCache(resource, relation, service);
-    promise = promise || service.findRelated({'resource': relation, 'type': type}, url);
+
+    let promise = this.promiseFromCache(resource, relation, service) ||
+                  service.findRelated({'resource': relation, 'type': type}, url);
+
     let proxyProto = proxyFactory.extend(Ember.PromiseProxyMixin, {
-      'promise': promise, 'type': relation, 'kind': kind
+      'promise': promise,
+      'relation': relation,
+      'kind': kind,
+      'type': type
     });
-    return proxyProto.create({
-      content: (kind === 'hasOne') ? Ember.Object.create() : Ember.A([])
-    });
+    return proxyProto.create();
   },
 
   /**
@@ -104,9 +137,16 @@ const RelatedProxyUtil = Ember.Object.extend({
   proxyResolution(resource, proxy) {
     proxy.then(
       function (resources) {
-        proxy.set('content', resources);
-        let relation = proxy.get('type');
-        let kind = proxy.get('kind');
+        if (resources) {
+          if (Ember.isArray(resources)) {
+            proxy.addResources(resources);
+          } else {
+            proxy.addResource(resources);
+          }
+        }
+
+        let relation = proxy.get('relation');
+        let kind     = proxy.get('kind');
         resource.didResolveProxyRelation(relation, kind, resources);
         return resources;
       },
