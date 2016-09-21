@@ -197,20 +197,35 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @param {String} related - resource name
     @param {String} id
   */
-  addRelationship(related, id) {
-    if (id !== undefined) { id = id.toString(); } // ensure String id.
+  addRelationship(related, resourceOrId) {
+    let resource, id, identifier;
 
-    // actual resource type of this relationship is found in related-proxy's meta.
     let meta = this.relationMetadata(related);
     let key = ['relationships', meta.relation, 'data'].join('.');
     let data = this.get(key);
     let type = pluralize(meta.type);
-    let identifier = { type: type, id: id };
-    let owner = (typeof getOwner === 'function') ? getOwner(this) : this.container;
-    let resource = owner.lookup(`service:${type}`).cacheLookup(id);
-    if (Array.isArray(data)) {
-      this._relationAdded(related, identifier);
-      data.push(identifier);
+
+    // Resource or Id?
+    if (Ember.typeOf(resourceOrId) === 'instance') {
+      resource = resourceOrId;
+      id = resource.get('id');
+    } else {
+      id = resourceOrId;
+      if (Ember.typeOf(id) === 'number') { id = id.toString(); } // Ensure string id.
+      resource = Ember.getOwner(this).lookup(`service:${type}`).cacheLookup(id);
+    }
+
+    // We can only add identifier data if we have an id.
+    if (id) { identifier = { type: type, id: id }; }
+
+    if (meta.kind === 'hasMany') {
+      // Add as data if we have an id.
+      if (id) {
+        this._relationAdded(related, identifier);
+        data.push(identifier);
+      }
+
+      // Add to proxy if we have a resource.
       if (resource) {
         let resources = this.get(related);
         if (!resources.contains(resource)) {
@@ -218,14 +233,18 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
         }
       }
     } else {
-      let previous = (data && data.id) ? { type: type, id: data.id } : null;
-      this._relationAdded(related, identifier, previous);
-      data = identifier;
+      // Add as data if we have an id.
+      if (id) {
+        let previous = (data && data.id) ? { type: type, id: data.id } : null;
+        this._relationAdded(related, identifier, previous);
+        data = identifier;
+      }
+
       if (resource) {
-        this.get(meta.relation).addResource(resource);
-        // this.set(`${meta.relation}.content`, resource);
+        this.get(related).addResource(resource);
       }
     }
+
     return this.set(key, data);
   },
 
