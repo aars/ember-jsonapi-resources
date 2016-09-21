@@ -214,7 +214,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
       if (resource) {
         let resources = this.get(related);
         if (!resources.contains(resource)) {
-          resources.pushObject(resource);
+          resources.addResource(resource);
         }
       }
     } else {
@@ -222,7 +222,8 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
       this._relationAdded(related, identifier, previous);
       data = identifier;
       if (resource) {
-        this.set(`${meta.relation}.content`, resource);
+        this.get(meta.relation).addResource(resource);
+        // this.set(`${meta.relation}.content`, resource);
       }
     }
     return this.set(key, data);
@@ -502,6 +503,12 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     } else {
       return;
     }
+
+    /*
+     * This relationship data should already be initialized.
+     * relationships that are not defined in Resource definitions
+     * should not be added at runtime.
+     *
     let relationshipData = 'relationships.' + relation + '.data';
     let data = this.get(relationshipData);
     if (!data) {
@@ -511,6 +518,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
         this.set(relationshipData, Ember.A([]));
       }
     }
+    */
     this._updateRelationshipsData(relation, ids);
   },
 
