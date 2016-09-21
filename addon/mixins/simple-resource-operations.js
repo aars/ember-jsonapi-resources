@@ -44,7 +44,9 @@ export default Ember.Mixin.create({
     }
     // Unpersisted records only need to toggle isDeleted.
     if (this.get('isNew')) {
-      return this.destroy();
+      return new Ember.RSVP.Promise((resolve) => {
+        resolve(this.destroy());
+      });
     } else {
       return this.get('service').deleteResource(this);
     }
