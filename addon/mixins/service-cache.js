@@ -161,6 +161,16 @@ export default Ember.Mixin.create({
   },
 
   /**
+    Get everything currently in cache
+
+    @method cachePeekAll
+    @return {Array}
+ */
+  cachePeekAll() {
+    return this.cache.data.toArray();
+  },
+
+  /**
     Remove a resource from cached data
 
     @method cacheRemove
