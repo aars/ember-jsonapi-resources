@@ -18,7 +18,7 @@ import { pluralize } from 'ember-inflector';
 const hasOneProxy = Ember.ObjectProxy.reopenClass({
   create(properties) {
     properties = properties || {};
-    properties.content = properties.content || Ember.Object.create();
+    properties.content = properties.content || null;
     return this._super(properties);
   }
 }).extend({
