@@ -3,10 +3,13 @@ import { pluralize } from 'ember-inflector';
 
 export default Ember.Mixin.create({
   // I haven't found a good way to not fully duplicate this method
-  addRelationship(related, resourceOrId) {
-    console.log('this one!');
+  addRelationship(related, resourceOrId, noInverse) {
+    console.log('adding relationship', related, resourceOrId.toString(), 'to', this.toString());
     let resource, id;
     const retval = this._super(related, resourceOrId);
+
+    // noInverse to prevent infinite loop in adding inverse relationships.
+    if (noInverse) { return retval; }
 
     let meta = this.relationMetadata(related);
     let type = pluralize(meta.type);
@@ -23,7 +26,8 @@ export default Ember.Mixin.create({
 
     console.log(meta, resource);
     if (meta.inverse && resource) {
-      console.log('JAHOOR. Ja.');
+      console.log('adding inverse', meta.inverse, this.toString());
+      resource.addRelationship(meta.inverse, this, true);
     }
 
     return retval;
