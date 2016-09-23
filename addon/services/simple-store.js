@@ -14,9 +14,7 @@ export default Ember.Service.extend({
     return this._service(type).cacheLookup(id);
   },
   peekAll(type) {
-    let service = this._service(type);
-    // TODO: cacheLookup without id gets all. Don't touch internal cache object here.
-    return (service.cache && service.cache.data) ? service.cache.data : Ember.A([]);
+    return this._service(type).cachePeekAll();
   },
 
   // I wish we could inspect the Resource before initialization so we can
