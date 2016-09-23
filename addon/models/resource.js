@@ -232,7 +232,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
           resources.addResource(resource);
         }
       }
-    } else {
+    } else if (meta.kind === 'hasOne') {
       // Add as data if we have an id.
       if (id) {
         let previous = (data && data.id) ? { type: type, id: data.id } : null;
