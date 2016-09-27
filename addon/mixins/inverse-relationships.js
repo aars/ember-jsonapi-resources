@@ -4,7 +4,7 @@ import { pluralize } from 'ember-inflector';
 export default Ember.Mixin.create({
   // I haven't found a good way to not fully duplicate this method
   addRelationship(related, resourceOrId, noInverse) {
-    console.log('adding relationship', related, resourceOrId.toString(), 'to', this.toString());
+    // console.log('adding relationship', related, resourceOrId.toString(), 'to', this.toString());
     let resource, id;
     const retval = this._super(related, resourceOrId);
 
@@ -24,9 +24,9 @@ export default Ember.Mixin.create({
       resource = Ember.getOwner(this).lookup(`service:${type}`).cacheLookup(id);
     }
 
-    console.log(meta, resource);
+    // console.log(meta, resource);
     if (meta.inverse && resource) {
-      console.log('adding inverse', meta.inverse, this.toString());
+      // console.log('adding inverse', meta.inverse, this.toString());
       resource.addRelationship(meta.inverse, this, true);
     }
 
