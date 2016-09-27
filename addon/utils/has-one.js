@@ -57,7 +57,7 @@ export default function hasOne(relation) {
       return util.createProxy(this, kind);
     },
     set(k, v) {
-      return this.addRelationship(k, v);
+      this.addRelationship(k, v);
     }
   }).meta({relation: relation, type: type, kind: kind});
 }

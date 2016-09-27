@@ -51,7 +51,12 @@ export default function hasOne(relation) {
     type: meta.type,
     kind: meta.kind
   });
-  return Ember.computed(linksPath(meta.relation), function () {
-    return util.createProxy(this, meta.kind);
+  return Ember.computed(linksPath(meta.relation), {
+    get() {
+      return util.createProxy(this, meta.kind);
+    },
+    set(k, v) {
+      this.addRelationship(k, v);
+    }
   }).meta(meta);
 }
