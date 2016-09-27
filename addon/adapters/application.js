@@ -196,12 +196,20 @@ export default Ember.Object.extend(FetchMixin, Evented, {
       return RSVP.Promise.resolve(null);
     }
     json = json || { data: { id: resource.get('id'), type: resource.get('type') } };
+<<<<<<< HEAD
     json.data.relationships = relationships;
+=======
+    let cleanup = Ember.K;
+    if (relationships) {
+      json.data.relationships = relationships;
+      cleanup = resource._resetRelationships.bind(resource);
+    }
+>>>>>>> origin/master
     return this.fetch(url, {
       method: 'PATCH',
       body: JSON.stringify(json),
       update: true
-    });
+    }).then(cleanup);
   },
 
   /**
@@ -240,7 +248,7 @@ export default Ember.Object.extend(FetchMixin, Evented, {
 
     @method createRelationship
     @param {Resource} resource instance, has URLs via it's relationships property
-    @param {String} relationship name (plural) to find the url from the resource instance
+    @param {String} relationship name
     @param {String} id of the related resource
     @return {Promise}
   */
@@ -248,7 +256,11 @@ export default Ember.Object.extend(FetchMixin, Evented, {
     return this.fetch(this._urlForRelationship(resource, relationship), {
       method: 'POST',
       body: JSON.stringify(this.serializer.serializeRelationship(resource, relationship, id))
+<<<<<<< HEAD
     });
+=======
+    }).then(resource._resetRelationships.bind(resource));
+>>>>>>> origin/master
   },
 
   /**
@@ -281,14 +293,18 @@ export default Ember.Object.extend(FetchMixin, Evented, {
 
     @method patchRelationship
     @param {Resource} resource instance, has URLs via it's relationships property
-    @param {String} relationship name (plural) to find the url from the resource instance
+    @param {String} relationship
     @return {Promise}
   */
   patchRelationship(resource, relationship) {
     return this.fetch(this._urlForRelationship(resource, relationship), {
       method: 'PATCH',
       body: JSON.stringify(this.serializer.serializeRelationship(resource, relationship))
+<<<<<<< HEAD
     });
+=======
+    }).then(resource._resetRelationships.bind(resource));
+>>>>>>> origin/master
   },
 
   /**
@@ -310,7 +326,7 @@ export default Ember.Object.extend(FetchMixin, Evented, {
 
     @method deleteRelationship
     @param {Resource} resource instance, has URLs via it's relationships property
-    @param {String} relationship name (plural) to find the url from the resource instance
+    @param {String} relationship name
     @param {String} id of the related resource
     @return {Promise}
   */
@@ -318,14 +334,18 @@ export default Ember.Object.extend(FetchMixin, Evented, {
     return this.fetch(this._urlForRelationship(resource, relationship), {
       method: 'DELETE',
       body: JSON.stringify(this.serializer.serializeRelationship(resource, relationship, id))
+<<<<<<< HEAD
     });
+=======
+    }).then(resource._resetRelationships.bind(resource));
+>>>>>>> origin/master
   },
 
   /**
     @method _urlForRelationship
     @private
     @param {Resource} resource instance, has URLs via it's relationships property
-    @param {String} relationship name (plural) to find the url from the resource instance
+    @param {String} relationship name
     @return {String} url
   */
   _urlForRelationship(resource, relationship) {
