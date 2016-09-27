@@ -12,6 +12,11 @@ import Ember from 'ember';
 */
 export default Ember.Mixin.create({
   /**
+   Default flag for 'includeRelationships' in update/create.
+   */
+  includeRelationships: true,
+
+  /**
    Flag for deleted instances, not persisted.
 
     @property isDeleted
@@ -35,7 +40,7 @@ export default Ember.Mixin.create({
   save() {
     return this.get('isNew') ?
       this.get('service').createResource(this) :
-      this.get('service').updateResource(this);
+      this.get('service').updateResource(this, this.get('includeRelationships'));
   },
 
   delete() {
