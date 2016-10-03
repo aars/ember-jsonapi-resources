@@ -14,7 +14,7 @@ export default Ember.Mixin.create({
   /**
    Default flag for 'includeRelationships' in update/create.
    */
-  includeRelationships: true,
+  includeRelationships: Ember.computed.alias('changedRelationships'),
 
   /**
    Flag for deleted instances, not persisted.
