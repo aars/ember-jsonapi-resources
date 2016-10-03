@@ -45,6 +45,7 @@ import { extractMeta } from 'ember-jsonapi-resources/utils/related-helpers';
 */
 export default function hasMany(relation) {
   const meta = extractMeta(relation);
+  meta.kind = 'hasMany';
 
   let util = RelatedProxyUtil.create({
     relationship: meta.relation,
@@ -52,7 +53,9 @@ export default function hasMany(relation) {
     kind: meta.kind
   });
 
-  return Ember.computed(linksPath(meta.relation), function () {
-    return util.createProxy(this, meta.kind);
+  return Ember.computed(linksPath(meta.relation), {
+    get() {
+      return util.createProxy(this, meta.kind);
+    }
   }).meta(meta);
 }
