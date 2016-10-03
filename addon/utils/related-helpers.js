@@ -8,7 +8,6 @@ import Ember from 'ember';
 import { isDasherized } from 'ember-jsonapi-resources/utils/is';
 
 export function extractMeta(relation) {
-  let kind = 'hasMany';
   let type = relation;
   let inverse;
   if (typeof relation === 'object') {
@@ -21,7 +20,6 @@ export function extractMeta(relation) {
   assertDasherizedRelation(relation);
 
   return {
-    kind: kind,
     type: type,
     relation: relation,
     inverse: inverse
