@@ -104,14 +104,10 @@ export default Ember.Object.extend({
   /**
     @method serializeRelationships
     @param {Resource} resource with relationships to serialize
-    @param {Array|true} relationships list of {String} relationship properties
-                        or `true` for all relationships.
+    @param {Array} relationships list of {String} relationship properties
     @return {Object} the serialized `relationship` node for the JSON payload
   */
   serializeRelationships(resource, relationships) {
-    if (relationships === true) {
-      relationships = Object.keys(resource.get('relationships'));
-    }
     if (!relationships || relationships.length === 0) {
       return null;
     }
