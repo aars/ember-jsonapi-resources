@@ -388,10 +388,11 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   changedRelationships: computed('_relationships', {
     get() {
-      let relationships = Object.keys(this._relationships).filter( (relation) => {
+      let relationships = Object.keys(this._relationships).filter((relation) => {
         let ref = this._relationships[relation];
-        return !!ref.previous || (ref.removals && ref.removals.length) ||
-          (ref.added && ref.added.length);
+        return !!ref.changed ||
+               (ref.removals && ref.removals.length) ||
+               (ref.added && ref.added.length);
       });
       return Ember.A(relationships);
     }
