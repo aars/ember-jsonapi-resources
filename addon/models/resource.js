@@ -221,8 +221,8 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     if (id) { identifier = { type: type, id: id }; }
 
     if (meta.kind === 'hasMany') {
-      // Add as data if we have an id.
-      if (id) {
+      // Add as data if we have an id (and it not already exists)
+      if (id && !data.filterBy('id', identifier.id)) {
         this._relationAdded(related, identifier);
         data.push(identifier);
       }
@@ -542,6 +542,8 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
      * relationships that are not defined in Resource definitions
      * should not be added at runtime.
      *
+     * At the very least, this should move to _updateRelationshipData.
+     */
     let relationshipData = 'relationships.' + relation + '.data';
     let data = this.get(relationshipData);
     if (!data) {
@@ -551,7 +553,6 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
         this.set(relationshipData, Ember.A([]));
       }
     }
-    */
     this._updateRelationshipsData(relation, ids);
   },
 
