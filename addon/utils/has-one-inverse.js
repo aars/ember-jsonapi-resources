@@ -46,6 +46,8 @@ import { extractMeta } from 'ember-jsonapi-resources/utils/related-helpers';
 */
 export default function hasOne(relation) {
   const meta = extractMeta(relation);
+  meta.kind = 'hasOne';
+
   let util = RelatedProxyUtil.create({
     relationship: meta.relation,
     type: meta.type,
