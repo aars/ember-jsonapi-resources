@@ -222,7 +222,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
 
     if (meta.kind === 'hasMany') {
       // Add as data if we have an id (and it not already exists)
-      if (id && !data.filterBy('id', identifier.id)) {
+      if (id && (!data.length || !data.filterBy('id', id))) {
         this._relationAdded(related, identifier);
         data.push(identifier);
       }
