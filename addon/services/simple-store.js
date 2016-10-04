@@ -34,7 +34,11 @@ export default Ember.Service.extend({
   },
 
   _modelFactory(type) {
-    return Ember.getOwner(this).lookup(`model:${type}`);
+    const _factory = Ember.getOwner(this).lookup(`model:${type}`);
+    if (!_factory) {
+      throw new Error(`${type} model factory not found`);
+    }
+    return _factory;
   },
   _service(type) {
     const _type = pluralize(type);
