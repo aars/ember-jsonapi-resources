@@ -200,10 +200,6 @@ const RelatedProxyUtil = Ember.Object.extend({
     } else {
       content = this.serviceCacheLookup(service, data);
     }
-    if (content) {
-      Ember.Logger.debug('promiseFromCache:',
-          `${resource.get('type')}(${resource.get('id')})->${relation}`, content);
-    }
     return (content) ? RSVP.Promise.resolve(content) : null;
   },
 
