@@ -117,6 +117,10 @@ const RelatedProxyUtil = Ember.Object.extend({
     let owner = (typeof Ember.getOwner === 'function') ? Ember.getOwner(resource) : resource.container;
     let service = owner.lookup('service:' + pluralize(type));
 
+    if (!service) {
+      throw new Error(`"${pluralize(type)}" has no service`);
+    }
+
     let promise = this.promiseFromCache(resource, relation, service) ||
                   service.findRelated({'resource': relation, 'type': type}, url);
 
