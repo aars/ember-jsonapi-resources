@@ -238,11 +238,17 @@ export default Ember.Object.extend(Evented, {
       return RSVP.Promise.resolve(null);
     }
     json = json || { data: { id: resource.get('id'), type: resource.get('type') } };
-    let cleanup = Ember.K;
     if (relationships) {
       json.data.relationships = relationships;
-      cleanup = resource._resetRelationships.bind(resource);
     }
+    let cleanup = function () {
+      console.log(resource);
+      resource._resetAttributes();
+      if (relationships) {
+        resource._resetRelationships();
+      }
+    };
+
     return this.fetch(url, {
       method: 'PATCH',
       body: JSON.stringify(json),
