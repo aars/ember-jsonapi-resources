@@ -156,7 +156,7 @@ export default Ember.Mixin.create({
       if (isExpired) {
         Ember.run.next(this.cache.data, 'removeObject', resource);
       }
-      return resource.get('id') === id && !isExpired;
+      return resource.get('id') === id.toString() && !isExpired;
     }.bind(this));
   },
 
