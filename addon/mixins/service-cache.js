@@ -151,12 +151,14 @@ export default Ember.Mixin.create({
     @return {Resource|undefined}
   */
   cacheLookup(id) {
+    if (id !== undefined) { id = id.toString(); } //Ensure String id.
+
     return this.cache.data.find(function(resource) {
       const isExpired = resource.get('isCacheExpired');
       if (isExpired) {
         Ember.run.next(this.cache.data, 'removeObject', resource);
       }
-      return resource.get('id') === id.toString() && !isExpired;
+      return resource.get('id') === id && !isExpired;
     }.bind(this));
   },
 
