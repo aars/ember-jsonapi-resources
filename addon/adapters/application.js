@@ -238,16 +238,31 @@ export default Ember.Object.extend(Evented, {
       return RSVP.Promise.resolve(null);
     }
     json = json || { data: { id: resource.get('id'), type: resource.get('type') } };
-    let cleanup = Ember.K;
+
     if (relationships) {
       json.data.relationships = relationships;
-      cleanup = resource._resetRelationships.bind(resource);
     }
+
     return this.fetch(url, {
       method: 'PATCH',
       body: JSON.stringify(json),
       update: true
-    }).then(cleanup);
+    }).then(() => {
+      // FIXME:
+      // This cleanup feels like a hack. Why would the relationships be reset here,
+      // but not changed/previous attributes (through `didUpdateResource` -> `_resetAttributes`)?
+      //
+      // Though currently, this seems necessary since after this request, deserialize will try
+      // to update this resource through `cacheUpdate`, which updates a _different_ object in cache,
+      // and *not* the actual Resource object that we tried to save. So nothing gets reset, and the
+      // Resource thinks it's still 'dirty'.
+      //
+      // For now, I only improved the hack:
+      // just call `didUpdateResource` on the actual resource we were given.
+      // `didUpdateResource` itself is updated to check if relationship data needs
+      // to be reset.
+      resource.didUpdateResource(json.data);
+    });
   },
 
   /**

@@ -139,7 +139,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   _updateRelationshipsData(relation, ids) {
     if (!Array.isArray(ids)) {
-      this._updateToOneRelationshipData(relation, ids); 
+      this._updateToOneRelationshipData(relation, ids);
     } else {
       let existing = this._existingRelationshipData(relation);
       if (!existing.length) {
@@ -178,7 +178,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   _replaceRelationshipsData(relation, ids) {
     if (!Array.isArray(ids)) {
-      this._updateToOneRelationshipData(relation, ids); 
+      this._updateToOneRelationshipData(relation, ids);
     } else {
       let existing = this._existingRelationshipData(relation);
       if (!existing.length) {
@@ -526,7 +526,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
 
   /**
     Sets all payload properties on the resource and resets private _attributes
-    used for changed/previous tracking
+    and _relationships used for changed/previous tracking
 
     @method didUpdateResource
     @param {Object} json the updated data for the resource
@@ -535,6 +535,9 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     if (this.get('id') !== json.id) { return; }
     this.setProperties(json);
     this._resetAttributes();
+    if (json.relationships) {
+      this._resetRelationships();
+    }
   },
 
   /**
