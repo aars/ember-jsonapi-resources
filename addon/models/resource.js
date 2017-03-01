@@ -104,6 +104,21 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   _attributes: null,
 
   /**
+    Array of changed attribute keys.
+
+    The Actual changed values (previous, changed) are stored on _attributes,
+    but we can not use that object or it's keys to create computed properties
+    that respond to changes (i.e. no live isDirty property).
+    This array is a simple list of attributes that are not in their original
+    state, and can be used to track the (dirty-)state of the resource.
+
+    @protected
+    @property _changedAttributes
+    @type Array
+  */
+  _changedAttributes: null,
+
+  /**
     Hash of relationships that were changed
 
     @private
@@ -111,6 +126,15 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @type Object
   */
   _relationships: null,
+
+  /**
+   Array of changed relationship keys. Same use as _changedAttributes.
+
+   @protected
+   @property _changedRelationships
+   @type Array
+  */
+  _changedRelationships: null,
 
   /**
     Flag for new instance, e.g. not persisted
@@ -139,7 +163,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   _updateRelationshipsData(relation, ids) {
     if (!Array.isArray(ids)) {
-      this._updateToOneRelationshipData(relation, ids); 
+      this._updateToOneRelationshipData(relation, ids);
     } else {
       let existing = this._existingRelationshipData(relation);
       if (!existing.length) {
@@ -178,7 +202,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   _replaceRelationshipsData(relation, ids) {
     if (!Array.isArray(ids)) {
-      this._updateToOneRelationshipData(relation, ids); 
+      this._updateToOneRelationshipData(relation, ids);
     } else {
       let existing = this._existingRelationshipData(relation);
       if (!existing.length) {
@@ -300,6 +324,16 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
         ref.added.push({type: pluralize(relation), id: id});
       }
     }
+
+    if (!this.get('_changedRelationships')) {
+      this.set('_changedRelationships', Ember.A([]));
+    }
+
+    if (!Ember.isEmpty(ref.added) ||
+        !Ember.isEmpty(ref.removals) ||
+        !Ember.isEmpty(ref.changed)) {
+      this.get('_changedRelationships').pushObject(relation);
+    }
   },
 
   /**
@@ -363,6 +397,15 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
       if (!ref.removals.findBy('id', id)) {
         ref.removals.pushObject({ type: pluralize(relation), id: id });
       }
+    }
+
+    if (!this.get('_changedRelationships')) {
+      this.set('_changedRelationships', Ember.A([]));
+    }
+    if (!Ember.isEmpty(ref.added) ||
+        !Ember.isEmpty(ref.removals) ||
+        !Ember.isEmpty(ref.previous)) {
+      this.get('_changedRelationships').removeObject(relation);
     }
   },
 
@@ -455,6 +498,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
         delete this._attributes[attr];
       }
     }
+    this.set('_changedAttributes', Ember.A([]));
   },
 
   /**
@@ -499,6 +543,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
         delete this._relationships[attr];
       }
     }
+    this.set('_changedRelationships', Ember.A([]));
   },
 
   /**
