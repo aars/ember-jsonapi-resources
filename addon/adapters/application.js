@@ -261,7 +261,7 @@ export default Ember.Object.extend(Evented, {
       // just call `didUpdateResource` on the actual resource we were given.
       // `didUpdateResource` itself is updated to check if relationship data needs
       // to be reset.
-      resource.didUpdateResource(json.data);
+      resource.didUpdateResource(this.serializer.serializeResource(resource));
     });
   },
 
