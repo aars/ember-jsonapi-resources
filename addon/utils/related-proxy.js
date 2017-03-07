@@ -63,7 +63,7 @@ const RelatedProxyUtil = Ember.Object.extend({
       newContent = Ember.A([]);
     } else if (kind === 'toOne') {
       proxyFactory = Ember.ObjectProxy;
-      newContent = Ember.Object.create();
+      newContent = null;
     }
     if (resource.get('isNew')) {
       return proxyFactory.create({ content: newContent });
@@ -92,7 +92,7 @@ const RelatedProxyUtil = Ember.Object.extend({
       'promise': promise, 'type': relation, 'kind': kind
     });
     return proxyProto.create({
-      content: (kind === 'toOne') ? Ember.Object.create() : Ember.A([])
+      content: (kind === 'toOne') ? null : Ember.A([])
     });
   },
 
