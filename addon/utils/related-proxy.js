@@ -62,7 +62,9 @@ const RelatedProxyUtil = Ember.Object.extend({
       proxyFactory = Ember.ArrayProxy;
       newContent = Ember.A([]);
     } else if (kind === 'toOne') {
-      proxyFactory = Ember.ObjectProxy;
+      proxyFactory = Ember.ObjectProxy.extend(Ember.PromiseProxyMixin, {
+        promise: new Ember.RSVP.Promise(resolve => { resolve(null); })
+      });
       newContent = null;
     }
     if (resource.get('isNew')) {
