@@ -325,14 +325,17 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
       }
     }
 
-    if (!this.get('_changedRelationships')) {
-      this.set('_changedRelationships', Ember.A([]));
-    }
+    // Track relationship changes
+    if (!this.get('isNew')) {
+      if (!this.get('_changedRelationships')) {
+        this.set('_changedRelationships', Ember.A([]));
+      }
 
-    if (!Ember.isEmpty(ref.added) ||
-        !Ember.isEmpty(ref.removals) ||
-        !Ember.isEmpty(ref.changed)) {
-      this.get('_changedRelationships').pushObject(relation);
+      if (!Ember.isEmpty(ref.added) ||
+          !Ember.isEmpty(ref.removals) ||
+          !Ember.isEmpty(ref.changed)) {
+        this.get('_changedRelationships').pushObject(relation);
+      }
     }
   },
 
@@ -399,13 +402,16 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
       }
     }
 
-    if (!this.get('_changedRelationships')) {
-      this.set('_changedRelationships', Ember.A([]));
-    }
-    if (!Ember.isEmpty(ref.added) ||
-        !Ember.isEmpty(ref.removals) ||
-        !Ember.isEmpty(ref.previous)) {
-      this.get('_changedRelationships').removeObject(relation);
+    // Track relationship changes.
+    if (!this.get('isNew')) {
+      if (!this.get('_changedRelationships')) {
+        this.set('_changedRelationships', Ember.A([]));
+      }
+      if (!Ember.isEmpty(ref.added) ||
+          !Ember.isEmpty(ref.removals) ||
+          !Ember.isEmpty(ref.previous)) {
+        this.get('_changedRelationships').removeObject(relation);
+      }
     }
   },
 
