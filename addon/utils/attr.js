@@ -63,18 +63,49 @@ export default function attr(type = 'any', mutable = true) {
 
     set: function (key, value) {
       const lastValue = this.get('attributes.' + key);
+      // Don't allow set on immutable values.
       if (!_mutable) {
         return immutableValue(key, value, lastValue);
       }
+      // Don't do anything if same value is set.
       if (value === lastValue) { return value; }
+
+      // Check value type.
       assertType.call(this, key, value);
+
+      // Set value.
       this.set('attributes.' + key, value);
+
+      // Track changes.
+      // Only on non-isNew resources, which are 'dirty' be default
       if (!this.get('isNew')) {
+        // Initialize tracking object and array for this attribute.
         this._attributes[key] = this._attributes[key] || {};
-        if (this._attributes[key].previous === undefined) {
-          this._attributes[key].previous = Ember.copy(lastValue, true);
+        if (!this.get('_changedAttributes')) {
+          this.set('_changedAttributes', Ember.A([]));
         }
+
+        // Track change(d key) and store previous/changed value.
+        // We (Ember.)Copy values to `previous` and `changed` to prevent both
+        // being a reference to the same object (and thus never showing up on
+        // computed property 'changedAttributes')
+        if (this._attributes[key].previous === undefined) {
+          // Value changed for the first time.
+          this._attributes[key].previous = Ember.copy(lastValue, true);
+          this.get('_changedAttributes').pushObject(key);
+        } else {
+          // Value changed again.
+          if (this._attributes[key].previous === value) {
+            // Value reverted to previous. No longer dirty. Remove from tracking.
+            this.get('_changedAttributes').removeObject(key);
+          } else if (this.get('_changedAttributes').indexOf(key) === -1){
+            // Value changed again, wasn't tracked anymore. Track it.
+            this.get('_changedAttributes').pushObject(key);
+          }
+        }
+
         this._attributes[key].changed = Ember.copy(value, true);
+
         let service = this.get('service');
         if (service) {
           service.trigger('attributeChanged', this);
