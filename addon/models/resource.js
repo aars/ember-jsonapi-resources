@@ -139,7 +139,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   _updateRelationshipsData(relation, ids) {
     if (!Array.isArray(ids)) {
-      this._updateToOneRelationshipData(relation, ids); 
+      this._updateToOneRelationshipData(relation, ids);
     } else {
       let existing = this._existingRelationshipData(relation);
       if (!existing.length) {
@@ -178,7 +178,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   _replaceRelationshipsData(relation, ids) {
     if (!Array.isArray(ids)) {
-      this._updateToOneRelationshipData(relation, ids); 
+      this._updateToOneRelationshipData(relation, ids);
     } else {
       let existing = this._existingRelationshipData(relation);
       if (!existing.length) {
@@ -525,16 +525,42 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   },
 
   /**
-    Sets all payload properties on the resource and resets private _attributes
-    used for changed/previous tracking
+    Callback after Resource is updated client-side, or from server payload.
 
     @method didUpdateResource
     @param {Object} json the updated data for the resource
   */
   didUpdateResource(json) {
-    if (this.get('id') !== json.id) { return; }
-    this.setProperties(json);
+    // Received payload does not have to represent the full resource as we know it
+    // client-side. Specifically, relationship data can be safely omitted in payload,
+    // but that does not invalidate the relationship data we have stored client-side.
+    //
+    // If we receive a payload we can expect all attributes are present.
+    // Only _update_ specific relationship, don't replace `relationships` in full.
+    if (json) {
+      // Replace attributes in full.
+      if (json.attributes) {
+        this.set('attributes', json.attributes);
+      }
+      if (json.relationships) {
+        for (let relation in json.relationships) {
+          let key = `relationships.${relation}`;
+          if (!this.get(key)) {
+            this.set(key, json.relationships[relation]);
+          } else {
+            let links = json.relationships[relation].links;
+            let data  = json.relationships[relation].data;
+
+            if (links) { this.set(`${key}.links`, links); }
+            if (data)  { this.set(`${key}.data`, data); }
+          }
+        }
+      }
+    }
+
+    // reset tracking.
     this._resetAttributes();
+    this._resetRelationships();
   },
 
   /**
