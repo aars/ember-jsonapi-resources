@@ -345,9 +345,11 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     let meta = this.relationMetadata(relation);
     let ref  = this._relationships[relation];
 
-    // TODO: Remove this? Why reset tracking?
+    // FIXME: Why setup tracking here each time? I've moved the call
+    // to this._resetRelationships.
     // setupRelationshipTracking.call(this, relation, meta.kind);
-    // TODO: why look up data when we get passed `previous`?
+
+    // FIXME: why look up data when we get passed `previous`?
     // let relationshipData = this.get(`relationships.${relation}.data`);
     if (meta && meta.kind === 'toOne') {
       ref.changed = identifier;
@@ -581,11 +583,13 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @method _resetRelationships
   */
   _resetRelationships() {
-    for (let attr in this._relationships) {
-      if (this._relationships.hasOwnProperty(attr)) {
-        delete this._relationships[attr];
+    for (let relation in this._relationships) {
+      if (this._relationships.hasOwnProperty(relation)) {
+        let meta = this.relationMetadata(relation);
+        setupRelationshipTracking.call(this, relation, meta.kind);
       }
     }
+
     this.set('_changedRelationships', Ember.A([]));
   },
 
@@ -619,6 +623,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @param {Object} json the updated data for the resource
   */
   didUpdateResource(json) {
+    console.log('resource didUpdate', this.toString());
     // Received payload does not have to represent the full resource as we know it
     // client-side. Specifically, relationship data can be safely omitted in payload,
     // but that does not invalidate the relationship data we have stored client-side.
