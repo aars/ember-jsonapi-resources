@@ -232,22 +232,22 @@ export default Ember.Object.extend(Evented, {
     let url = resource.get('links.self') || this.get('url') + '/' + resource.get('id');
     let json = this.serializer.serializeChanged(resource);
     let relationships = this.serializer.serializeRelationships(resource, includeRelationships);
-    if ((includeRelationships &&
-          ((!json && !relationships) || (!json && relationships.length === 0))) ||
-        (!includeRelationships && !json)) {
+    console.log(json, relationships);
+    if (Ember.isEmpty(json) && Ember.isEmpty(relationships)) {
       return RSVP.Promise.resolve(null);
     }
+
     json = json || { data: { id: resource.get('id'), type: resource.get('type') } };
-    let cleanup = Ember.K;
+
     if (relationships) {
       json.data.relationships = relationships;
-      cleanup = resource._resetRelationships.bind(resource);
     }
+
     return this.fetch(url, {
       method: 'PATCH',
       body: JSON.stringify(json),
       update: true
-    }).then(cleanup);
+    }).then(resource.didUpdateResource.bind(resource));
   },
 
   /**
