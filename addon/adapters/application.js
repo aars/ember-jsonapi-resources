@@ -77,7 +77,7 @@ export default Ember.Object.extend(Evented, {
     @param {Object} headers received from response
     @param {Object} options passed into original request
   */
-  deserialize(json, headers, options={}) {
+  deserialize(json, headers, options = {}) {
     if (!json || json === '' || !json.data) {
       return null;
     } else if (options.isUpdate) {
@@ -135,7 +135,7 @@ export default Ember.Object.extend(Evented, {
   findOne(id, query) {
     let url = this.get('url') + '/' + id;
     url += (query) ? '?' + Ember.$.param(query) : '';
-    return this.fetch(url, { method: 'GET' });
+    return this.fetchResource(url, { method: 'GET' });
   },
 
   /**
@@ -149,7 +149,7 @@ export default Ember.Object.extend(Evented, {
     let url = this.get('url');
     url += (options.query) ? '?' + Ember.$.param(options.query) : '';
     options = options.options || { method: 'GET' };
-    return this.fetch(url, options);
+    return this.fetchResource(url, options);
   },
 
   /**
@@ -182,7 +182,7 @@ export default Ember.Object.extend(Evented, {
     // use resource's service if in container, otherwise use this service to fetch
     let service = getOwner(this).lookup('service:' + pluralize(type)) || this;
     url = this.fetchUrl(url);
-    return service.fetch(url, { method: 'GET' });
+    return service.fetchResource(url, { method: 'GET' });
   },
 
   /**
@@ -194,7 +194,7 @@ export default Ember.Object.extend(Evented, {
     @return {Promise}
   */
   createResource(resource) {
-    return this.fetch(this.get('url'), {
+    return this.fetchResource(this.get('url'), {
       method: 'POST',
       body: JSON.stringify(this.serializer.serialize(resource))
     }).then(function(resp) {
@@ -232,22 +232,30 @@ export default Ember.Object.extend(Evented, {
     let url = resource.get('links.self') || this.get('url') + '/' + resource.get('id');
     let json = this.serializer.serializeChanged(resource);
     let relationships = this.serializer.serializeRelationships(resource, includeRelationships);
-    console.log(json, relationships);
     if (Ember.isEmpty(json) && Ember.isEmpty(relationships)) {
       return RSVP.Promise.resolve(null);
     }
 
-    json = json || { data: { id: resource.get('id'), type: resource.get('type') } };
-
+    if (!json) {
+      json = { data: { id: resource.get('id'), type: resource.get('type') } };
+    }
     if (relationships) {
       json.data.relationships = relationships;
     }
 
+    // Successful responses get deserialized, except for 204 no content.
     return this.fetch(url, {
       method: 'PATCH',
       body: JSON.stringify(json),
       update: true
-    }).then(resource.didUpdateResource.bind(resource));
+    }).then(({status}) => {
+      // A 204 (No Content) response will not trigger deserialization, and
+      // won't trigger cacheUpdate, which won't trigger didUpdateResource.
+      // Do that manually.
+      if (status === 204) {
+        resource.didUpdateResource();
+      }
+    });
   },
 
   /**
@@ -397,6 +405,22 @@ export default Ember.Object.extend(Evented, {
     return this._fetch(url, options);
   },
 
+  /**
+    ember-fetchjax will resolve with {payload, status, headers, options},
+    but most fetch calls here are only interested in the payload response (resource).
+
+    @method fetchResource
+    @param {String} url
+    @param {Object} options
+    @return {Promise}
+    */
+  fetchResource(url, options = {}) {
+    return new Ember.RSVP.Promise((resolve, reject) => {
+      this.fetch(url, options).then(({payload}) => {
+        resolve(payload);
+      }).catch(reject);
+    });
+  },
   /**
     Hook to customize the URL, e.g. if your API is behind a proxy and you need
     to swap a portion of the domain to make a request on the same domain.
