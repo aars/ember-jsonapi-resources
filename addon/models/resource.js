@@ -8,7 +8,6 @@ import { pluralize, singularize } from 'ember-inflector';
 import attr from 'ember-jsonapi-resources/utils/attr';
 import { toOne, hasOne } from 'ember-jsonapi-resources/utils/to-one';
 import { toMany, hasMany } from 'ember-jsonapi-resources/utils/to-many';
-import { isType } from 'ember-jsonapi-resources/utils/is';
 import ResourceOperationsMixin from '../mixins/resource-operations';
 
 const { getOwner, computed, Logger } = Ember;
@@ -183,14 +182,22 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @param {String|null} id
   */
   _updateToOneRelationshipData(relation, id) {
+    if (id !== undefined) { id = id.toString(); } // ensure String id.
+
     let relationshipData = 'relationships.' + relation + '.data';
     let existing = this.get(relationshipData);
     existing = (existing) ? existing.id : null;
-    if (id === null || isType('string', id) && existing !== id) {
+
+    // Nothing to remove or add, stop.
+    if ((!existing && id === null) || existing === id) { return; }
+
+    // Remove old relationship.
+    if (existing) {
       this.removeRelationship(relation, existing);
-      if (id !== null) {
-        this._addRelationship(relation, id);
-      }
+    }
+    // Add new relationship?
+    if (id !== null) {
+      this._addRelationship(relation, id);
     }
   },
 
@@ -393,6 +400,10 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @param {String} id
   */
   removeRelationship(related, id) {
+    // Debug: I want to know when relationship removals are tracked.
+    Ember.Logger.debug('_relationRemoved', this.toString(), related, id);
+    console.trace();
+
     if (id !== undefined) { id = id.toString(); } // ensure String ids.
     let relation = this.get('relationships.' + related);
     if (Array.isArray(relation.data)) {
@@ -426,10 +437,14 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @param {String} id
   */
   _relationRemoved(relation, id) {
-    console.log('relation removed', this.get('type'), relation, id);
+    // Debug: I want to know when relationship removals are tracked.
+    Ember.Logger.debug('_relationRemoved', this.toString(), relation, id);
+
     let ref = this._relationships[relation] = this._relationships[relation] || {};
     let meta = this.relationMetadata(relation);
-    setupRelationshipTracking.call(this, relation, meta.kind);
+    // FIXME: This is probably unnecesarry, tracking is setup on _reset.
+    // setupRelationshipTracking.call(this, relation, meta.kind);
+
     if (meta.kind === 'toOne') {
       ref.changed = null;
       ref.previous = ref.previous || this.get('relationships.' + relation).data;
@@ -623,18 +638,20 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @param {Object} json the updated data for the resource
   */
   didUpdateResource(json) {
-    console.log('resource didUpdate', this.toString());
+    // Debug: I want to know when this callback is triggered.
+    Ember.Logger.debug('_relationRemoved', this.toString(), json);
+
     // Received payload does not have to represent the full resource as we know it
     // client-side. Specifically, relationship data can be safely omitted in payload,
     // but that does not invalidate the relationship data we have stored client-side.
     //
-    // If we receive a payload we can expect all attributes are present.
-    // Only _update_ specific relationship, don't replace `relationships` in full.
     if (json) {
+      // If we receive a payload we can expect all attributes are present.
       // Replace attributes in full.
       if (json.attributes) {
         this.set('attributes', json.attributes);
       }
+      // Only _update_ specific relationship, don't replace `relationships` in full.
       if (json.relationships) {
         for (let relation in json.relationships) {
           let key = `relationships.${relation}`;
