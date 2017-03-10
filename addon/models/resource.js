@@ -401,7 +401,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   removeRelationship(related, id) {
     // Debug: I want to know when relationship removals are tracked.
-    Ember.Logger.debug('_relationRemoved', this.toString(), related, id);
+    Logger.debug('removeRelationship', this.toString(), related, id);
     console.trace();
 
     if (id !== undefined) { id = id.toString(); } // ensure String ids.
@@ -438,7 +438,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   _relationRemoved(relation, id) {
     // Debug: I want to know when relationship removals are tracked.
-    Ember.Logger.debug('_relationRemoved', this.toString(), relation, id);
+    Logger.debug('_relationRemoved', this.toString(), relation, id);
 
     let ref = this._relationships[relation] = this._relationships[relation] || {};
     let meta = this.relationMetadata(relation);
@@ -639,7 +639,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   didUpdateResource(json) {
     // Debug: I want to know when this callback is triggered.
-    Ember.Logger.debug('_relationRemoved', this.toString(), json);
+    Logger.debug('didUpdateResource', this.toString(), json);
 
     // Received payload does not have to represent the full resource as we know it
     // client-side. Specifically, relationship data can be safely omitted in payload,
