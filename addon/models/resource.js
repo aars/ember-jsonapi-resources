@@ -8,7 +8,6 @@ import { pluralize, singularize } from 'ember-inflector';
 import attr from 'ember-jsonapi-resources/utils/attr';
 import { toOne, hasOne } from 'ember-jsonapi-resources/utils/to-one';
 import { toMany, hasMany } from 'ember-jsonapi-resources/utils/to-many';
-import { isType } from 'ember-jsonapi-resources/utils/is';
 import ResourceOperationsMixin from '../mixins/resource-operations';
 
 const { getOwner, computed, Logger } = Ember;
@@ -104,6 +103,21 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   _attributes: null,
 
   /**
+    Array of changed attribute keys.
+
+    The Actual changed values (previous, changed) are stored on _attributes,
+    but we can not use that object or it's keys to create computed properties
+    that respond to changes (i.e. no live isDirty property).
+    This array is a simple list of attributes that are not in their original
+    state, and can be used to track the (dirty-)state of the resource.
+
+    @protected
+    @property _changedAttributes
+    @type Array
+  */
+  _changedAttributes: null,
+
+  /**
     Hash of relationships that were changed
 
     @private
@@ -111,6 +125,15 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @type Object
   */
   _relationships: null,
+
+  /**
+   Array of changed relationship keys. Same use as _changedAttributes.
+
+   @protected
+   @property _changedRelationships
+   @type Array
+  */
+  _changedRelationships: null,
 
   /**
     Flag for new instance, e.g. not persisted
@@ -139,13 +162,13 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   _updateRelationshipsData(relation, ids) {
     if (!Array.isArray(ids)) {
-      this._updateToOneRelationshipData(relation, ids); 
+      this._updateToOneRelationshipData(relation, ids);
     } else {
       let existing = this._existingRelationshipData(relation);
       if (!existing.length) {
-        this.addRelationships(relation, ids);
+        this._addRelationships(relation, ids);
       } else if (ids.length > existing.length) {
-        this.addRelationships(relation, unique(ids, existing));
+        this._addRelationships(relation, unique(ids, existing));
       } else if (existing.length > ids.length) {
         this.removeRelationships(relation, unique(existing, ids));
       }
@@ -159,14 +182,22 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @param {String|null} id
   */
   _updateToOneRelationshipData(relation, id) {
+    if (id !== undefined) { id = id.toString(); } // ensure String id.
+
     let relationshipData = 'relationships.' + relation + '.data';
     let existing = this.get(relationshipData);
     existing = (existing) ? existing.id : null;
-    if (id === null || isType('string', id) && existing !== id) {
+
+    // Nothing to remove or add, stop.
+    if ((!existing && id === null) || existing === id) { return; }
+
+    // Remove old relationship.
+    if (existing) {
       this.removeRelationship(relation, existing);
-      if (id !== null) {
-        this.addRelationship(relation, id);
-      }
+    }
+    // Add new relationship?
+    if (id !== null) {
+      this._addRelationship(relation, id);
     }
   },
 
@@ -178,14 +209,14 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   _replaceRelationshipsData(relation, ids) {
     if (!Array.isArray(ids)) {
-      this._updateToOneRelationshipData(relation, ids); 
+      this._updateToOneRelationshipData(relation, ids);
     } else {
       let existing = this._existingRelationshipData(relation);
       if (!existing.length) {
-        this.addRelationships(relation, ids);
+        this._addRelationships(relation, ids);
       } else {
         this.removeRelationships(relation, existing);
-        this.addRelationships(relation, ids);
+        this._addRelationships(relation, ids);
       }
     }
   },
@@ -211,6 +242,12 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     }
   },
 
+  _addRelationships(related, ids) {
+    for (let i = 0; i < ids.length; i++) {
+      this._addRelationship(related, ids[i]);
+    }
+  },
+
   /**
     @method removeRelationships
     @param {String} related - resource name
@@ -219,6 +256,41 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   removeRelationships(related, ids) {
     for (let i = 0; i < ids.length; i++) {
       this.removeRelationship(related, ids[i]);
+    }
+  },
+
+  /**
+   Public method for adding relationships, with dirty/change tracking.
+
+   @method addRelationship
+   @param {String} related - resource name
+   @param {String} id
+   */
+  addRelationship(related, id) {
+    if (id !== undefined) { id = id.toString(); } // ensure String id.
+
+    let meta = this.relationMetadata(related);
+    let type = pluralize(meta.type);
+    let identifier = { type: type, id: id };
+    let previous;
+
+    // toOne could have a previous relation.
+    if (meta.kind === 'toOne') {
+      previous = this.get(`relationships.${meta.relation}.data.id`);
+    }
+
+    console.log('addRelationship', this.toString(), related, id, previous);
+
+    // _relationAdded will return true if this is an actual new/unknown
+    // relationship, and false if we already have this relationship.
+    let added = this._relationAdded(
+      related,
+      identifier,
+      (previous) ? { type: type, id: previous } : null
+    );
+
+    if (added) {
+      this._addRelationship(related, id);
     }
   },
 
@@ -236,11 +308,12 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     - http://jsonapi.org/format/#document-resource-object-linkage
     - http://jsonapi.org/format/#document-resource-identifier-objects
 
-    @method addRelationship
+    @method _addRelationship
     @param {String} related - resource name
     @param {String} id
   */
-  addRelationship(related, id) {
+
+  _addRelationship(related, id) {
     if (id !== undefined) { id = id.toString(); } // ensure String id.
 
     // actual resource type of this relationship is found in related-proxy's meta.
@@ -250,8 +323,8 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     let type = pluralize(meta.type);
     let identifier = { type: type, id: id };
     let resource = getOwner(this).lookup(`service:${type}`).cacheLookup(id);
+
     if (Array.isArray(data)) {
-      this._relationAdded(related, identifier);
       data.push(identifier);
       if (resource) {
         let resources = this.get(related);
@@ -260,8 +333,6 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
         }
       }
     } else {
-      let previous = (data && data.id) ? { type: type, id: data.id } : null;
-      this._relationAdded(related, identifier, previous);
       data = identifier;
       if (resource) {
         this.set(`${meta.relation}.content`, resource);
@@ -285,21 +356,55 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   _relationAdded(relation, identifier, previous) {
     let meta = this.relationMetadata(relation);
-    setupRelationshipTracking.call(this, relation, meta.kind);
-    let ref = this._relationships[relation];
-    let relationshipData = this.get(`relationships.${relation}.data`);
+    let ref  = this._relationships[relation];
+
+    // FIXME: Why setup tracking here each time? I've moved the call
+    // to this._resetRelationships.
+    // setupRelationshipTracking.call(this, relation, meta.kind);
+
+    // FIXME: why look up data when we get passed `previous`?
+    // let relationshipData = this.get(`relationships.${relation}.data`);
     if (meta && meta.kind === 'toOne') {
-      if (!relationshipData || relationshipData.id !== identifier.id) {
-        ref.changed = identifier;
-        ref.previous = ref.previous || previous;
+      // Relationship already exists? Nothing to do.
+      if (previous && previous.id === identifier.id) {
+        Logger.debug('_relationAdded', 'toOne', this.toString(), relation, identifier, 'already exists');
+        return false;
       }
+
+      // Set changed/previous.
+      ref.changed = identifier;
+      ref.previous = ref.previous || previous;
     } else if (meta && meta.kind === 'toMany') {
       let id = identifier.id;
+      let type = pluralize(meta.type);
+      // Relationship already exists? Nothing to do.
+      if (this.relationships[type].data.findBy('id', id)) {
+        Logger.debug('_relationAdded', 'toMany', this.toString(), relation, identifier, 'already exists');
+        return false;
+      }
+
+      // If this id was part of removals, it should no longer be.
       ref.removals = Ember.A(ref.removals.rejectBy('id', id));
+      // List as added relationship.
       if (!ref.added.findBy('id', id)) {
-        ref.added.push({type: pluralize(relation), id: id});
+        ref.added.push({type: type, id: id});
       }
     }
+
+    // Track relationship changes
+    if (!this.get('isNew')) {
+      if (!this.get('_changedRelationships')) {
+        this.set('_changedRelationships', Ember.A([]));
+      }
+
+      if (!Ember.isEmpty(ref.added) ||
+          !Ember.isEmpty(ref.removals) ||
+          !Ember.isEmpty(ref.changed)) {
+        this.get('_changedRelationships').pushObject(relation);
+      }
+    }
+
+    return true;
   },
 
   /**
@@ -319,6 +424,10 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @param {String} id
   */
   removeRelationship(related, id) {
+    // Debug: I want to know when relationship removals are tracked.
+    Logger.debug('removeRelationship', this.toString(), related, id);
+    console.trace();
+
     if (id !== undefined) { id = id.toString(); } // ensure String ids.
     let relation = this.get('relationships.' + related);
     if (Array.isArray(relation.data)) {
@@ -352,9 +461,14 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @param {String} id
   */
   _relationRemoved(relation, id) {
+    // Debug: I want to know when relationship removals are tracked.
+    Logger.debug('_relationRemoved', this.toString(), relation, id);
+
     let ref = this._relationships[relation] = this._relationships[relation] || {};
     let meta = this.relationMetadata(relation);
-    setupRelationshipTracking.call(this, relation, meta.kind);
+    // FIXME: This is probably unnecesarry, tracking is setup on _reset.
+    // setupRelationshipTracking.call(this, relation, meta.kind);
+
     if (meta.kind === 'toOne') {
       ref.changed = null;
       ref.previous = ref.previous || this.get('relationships.' + relation).data;
@@ -362,6 +476,18 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
       ref.added = Ember.A(ref.added.rejectBy('id', id));
       if (!ref.removals.findBy('id', id)) {
         ref.removals.pushObject({ type: pluralize(relation), id: id });
+      }
+    }
+
+    // Track relationship changes.
+    if (!this.get('isNew')) {
+      if (!this.get('_changedRelationships')) {
+        this.set('_changedRelationships', Ember.A([]));
+      }
+      if (!Ember.isEmpty(ref.added) ||
+          !Ember.isEmpty(ref.removals) ||
+          !Ember.isEmpty(ref.previous)) {
+        this.get('_changedRelationships').pushObject(relation);
       }
     }
   },
@@ -408,10 +534,11 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   */
   changedRelationships: computed('_relationships', {
     get() {
-      let relationships = Object.keys(this._relationships).filter( (relation) => {
+      let relationships = Object.keys(this._relationships).filter((relation) => {
         let ref = this._relationships[relation];
-        return !!ref.changed || (ref.removals && ref.removals.length) ||
-          (ref.added && ref.added.length);
+        // `changed` can be null when a relation is removed. Check for previous as well.
+        return (ref.previous || ref.changed) ||
+               (!Ember.isEmpty(ref.removals) || !Ember.isEmpty(ref.added));
       });
       return Ember.A(relationships);
     }
@@ -455,6 +582,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
         delete this._attributes[attr];
       }
     }
+    this.set('_changedAttributes', Ember.A([]));
   },
 
   /**
@@ -470,7 +598,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
         let meta = this.relationMetadata(relation);
         if (meta && meta.kind === 'toOne') {
           if (ref.changed && ref.changed.id && ref.previous && ref.previous.id) {
-            this.addRelationship(relation, ref.previous.id);
+            this._addRelationship(relation, ref.previous.id);
           }
         } else if (meta && meta.kind === 'toMany') {
           let added = ref.added.mapBy('id');
@@ -479,7 +607,7 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
             this.removeRelationship(relation, id);
           });
           removed.forEach( (id) => {
-            this.addRelationship(relation, id);
+            this._addRelationship(relation, id);
           });
         }
       });
@@ -494,11 +622,14 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
     @method _resetRelationships
   */
   _resetRelationships() {
-    for (let attr in this._relationships) {
-      if (this._relationships.hasOwnProperty(attr)) {
-        delete this._relationships[attr];
+    for (let relation in this._relationships) {
+      if (this._relationships.hasOwnProperty(relation)) {
+        let meta = this.relationMetadata(relation);
+        setupRelationshipTracking.call(this, relation, meta.kind);
       }
     }
+
+    this.set('_changedRelationships', Ember.A([]));
   },
 
   /**
@@ -525,16 +656,46 @@ const Resource = Ember.Object.extend(ResourceOperationsMixin, {
   },
 
   /**
-    Sets all payload properties on the resource and resets private _attributes
-    used for changed/previous tracking
+    Callback after Resource is updated client-side, or from server payload.
 
     @method didUpdateResource
     @param {Object} json the updated data for the resource
   */
   didUpdateResource(json) {
-    if (this.get('id') !== json.id) { return; }
-    this.setProperties(json);
+    // Debug: I want to know when this callback is triggered.
+    Logger.debug('didUpdateResource', this.toString(), json);
+    console.trace();
+
+    // Received payload does not have to represent the full resource as we know it
+    // client-side. Specifically, relationship data can be safely omitted in payload,
+    // but that does not invalidate the relationship data we have stored client-side.
+    //
+    if (json) {
+      // If we receive a payload we can expect all attributes are present.
+      // Replace attributes in full.
+      if (json.attributes) {
+        this.set('attributes', json.attributes);
+      }
+      // Only _update_ specific relationship, don't replace `relationships` in full.
+      if (json.relationships) {
+        for (let relation in json.relationships) {
+          let key = `relationships.${relation}`;
+          if (!this.get(key)) {
+            this.set(key, json.relationships[relation]);
+          } else {
+            let links = json.relationships[relation].links;
+            let data  = json.relationships[relation].data;
+
+            if (links) { this.set(`${key}.links`, links); }
+            if (data)  { this.set(`${key}.data`, data); }
+          }
+        }
+      }
+    }
+
+    // reset tracking.
     this._resetAttributes();
+    this._resetRelationships();
   },
 
   /**
@@ -699,8 +860,9 @@ function setupRelationship(relation, kind) {
 }
 
 function setupRelationshipTracking(relation, kind) {
-  this._relationships[relation] = this._relationships[relation] || {};
-  let ref = this._relationships[relation];
+  //this._relationships[relation] = this._relationships[relation] || {};
+  //let ref = this._relationships[relation];
+  let ref = {};
   if (kind === 'toOne') {
     ref.changed = ref.changed || null;
     ref.previous = ref.previous || null;
@@ -708,6 +870,7 @@ function setupRelationshipTracking(relation, kind) {
     ref.added = ref.added || Ember.A([]);
     ref.removals = ref.removals || Ember.A([]);
   }
+  this._relationships[relation] = ref;
 }
 
 function unique(superSet, subSet) {
